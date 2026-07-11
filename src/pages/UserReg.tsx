@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, Mail, Lock, User, Eye, EyeOff, AlertCircle, GraduationCap, UserCircle } from 'lucide-react';
+import { BookOpen, Mail, Lock, User, Eye, EyeOff, AlertCircle, GraduationCap, CircleUser as UserCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function UserReg() {
