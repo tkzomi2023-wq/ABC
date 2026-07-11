@@ -36,8 +36,10 @@ export default function UserReg() {
       setError(error.message);
       setLoading(false);
     } else {
+      sessionStorage.setItem('pending_email', email);
+      sessionStorage.setItem('pending_password', password);
       const redirect = searchParams.get('redirect');
-      const confirmUrl = `/confirm-email?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}${redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''}`;
+      const confirmUrl = `/confirm-email?email=${encodeURIComponent(email)}${redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''}`;
       navigate(confirmUrl);
     }
   }

@@ -7,7 +7,6 @@ export default function EmailConfirmation() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const email = searchParams.get('email');
-  const password = searchParams.get('password');
   const redirect = searchParams.get('redirect');
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
@@ -20,10 +19,8 @@ export default function EmailConfirmation() {
       if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
         setEmailConfirmed(true);
         setTimeout(() => {
-          const redirectParam = redirect ? `&redirect=${encodeURIComponent(redirect)}` : '&open_profile=true';
-          const loginUrl = password
-            ? `/login?email=${encodeURIComponent(email || '')}&password=${encodeURIComponent(password)}&auto_login=true${redirectParam}`
-            : `/login?email=${encodeURIComponent(email || '')}${redirectParam}`;
+          const redirectParam = redirect ? `?redirect=${encodeURIComponent(redirect)}` : '?open_profile=true';
+          const loginUrl = `/login${redirectParam}`;
           navigate(loginUrl);
         }, 2000);
       }
@@ -33,10 +30,8 @@ export default function EmailConfirmation() {
       if (session?.user?.email_confirmed_at) {
         setEmailConfirmed(true);
         setTimeout(() => {
-          const redirectParam = redirect ? `&redirect=${encodeURIComponent(redirect)}` : '&open_profile=true';
-          const loginUrl = password
-            ? `/login?email=${encodeURIComponent(email || '')}&password=${encodeURIComponent(password)}&auto_login=true${redirectParam}`
-            : `/login?email=${encodeURIComponent(email || '')}${redirectParam}`;
+          const redirectParam = redirect ? `?redirect=${encodeURIComponent(redirect)}` : '?open_profile=true';
+          const loginUrl = `/login${redirectParam}`;
           navigate(loginUrl);
         }, 2000);
       }
@@ -44,7 +39,7 @@ export default function EmailConfirmation() {
     });
 
     return () => subscription.unsubscribe();
-  }, [email, password, navigate]);
+  }, [email, navigate, redirect]);
 
   async function handleResend() {
     if (!email) return;

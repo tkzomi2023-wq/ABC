@@ -37,9 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileLoading(true);
     setProfileError(null);
 
-    // Check that the client has an active session before querying
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -47,26 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle();
 
     if (error) {
-      const msg = `DB error: ${error.message} (code: ${error.code}) — session uid: ${currentSession?.user?.id ?? 'none'}`;
-      console.error('[fetchProfile]', msg);
-      setProfileError(msg);
+      console.error('[fetchProfile] Database error:', error.code);
+      setProfileError('Unable to load your profile. Please try refreshing the page.');
     } else if (!data) {
-      // Row not found — try by email as a fallback
-      const email = currentSession?.user?.email;
-      if (email) {
-        const { data: byEmail, error: emailErr } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-        if (byEmail && !emailErr) {
-          setProfile(byEmail);
-          setProfileLoading(false);
-          return;
-        }
-      }
-      setProfileError(`No profile row found for user ID: ${userId}`);
-      console.warn('[fetchProfile] No profile found for', userId);
+      setProfileError('Your profile is being set up. Please try again in a moment.');
+      console.warn('[fetchProfile] No profile found for user:', userId);
     } else {
       setProfile(data);
     }

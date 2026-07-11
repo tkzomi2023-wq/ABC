@@ -14,14 +14,17 @@ export default function UserLogin() {
 
   useEffect(() => {
     const emailParam = searchParams.get('email');
-    const passwordParam = searchParams.get('password');
     const autoLogin = searchParams.get('auto_login');
 
     if (emailParam) setEmail(decodeURIComponent(emailParam));
-    if (passwordParam) setPassword(decodeURIComponent(passwordParam));
 
-    if (autoLogin === 'true' && emailParam && passwordParam) {
-      handleAutoLogin(decodeURIComponent(emailParam), decodeURIComponent(passwordParam));
+    // Read password from sessionStorage (set during registration flow) — never from URL
+    const storedPassword = sessionStorage.getItem('pending_password');
+    if (storedPassword) {
+      setPassword(storedPassword);
+      if (autoLogin === 'true' && emailParam) {
+        handleAutoLogin(decodeURIComponent(emailParam), storedPassword);
+      }
     }
   }, [searchParams]);
 
@@ -36,10 +39,14 @@ export default function UserLogin() {
   async function handleAutoLogin(emailVal: string, passVal: string) {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email: emailVal, password: passVal });
+    sessionStorage.removeItem('pending_password');
+    sessionStorage.removeItem('pending_email');
     if (error) {
-      setError(error.message);
+      setError(error.message || 'Unable to sign in. Please check your credentials.');
       setLoading(false);
     } else {
+      sessionStorage.removeItem('pending_password');
+      sessionStorage.removeItem('pending_email');
       navigate(getPostLoginDestination());
     }
   }
@@ -50,7 +57,7 @@ export default function UserLogin() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      setError(error.message || 'Unable to sign in. Please check your credentials.');
       setLoading(false);
     } else {
       navigate(getPostLoginDestination());

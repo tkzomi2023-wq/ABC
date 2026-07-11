@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, Loader, AlertCircle, Hash, X, Maximize2, LogIn, UserPlus, BookOpen, Eye } from 'lucide-react';
 import { supabase, BlogPost } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { sanitizeHtml } from '../lib/sanitize';
 
 function renderParagraphs(text: string | null): string[] {
   if (!text) return [];
@@ -255,7 +256,7 @@ export default function BlogPostPage() {
         {previewParas.length > 0 && (
           <div className="space-y-4 mb-6">
             {previewParas.map((p, i) => (
-              <p key={i} className="text-slate-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: p }} />
+              <p key={i} className="text-slate-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
             ))}
           </div>
         )}
@@ -267,7 +268,7 @@ export default function BlogPostPage() {
             <div className="relative overflow-hidden" style={{ maxHeight: '120px' }}>
               <div className="space-y-4 select-none pointer-events-none" style={{ filter: 'blur(4px)', opacity: 0.5 }}>
                 {(introParas.slice(2, 4).length > 0 ? introParas.slice(2, 4) : bodyParas.slice(0, 2)).map((p, i) => (
-                  <p key={i} className="text-slate-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: p }} />
+                  <p key={i} className="text-slate-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
                 ))}
               </div>
             </div>
@@ -284,7 +285,7 @@ export default function BlogPostPage() {
             {introParas.length > 2 && (
               <div className="space-y-4 mb-8">
                 {introParas.slice(2).map((p, i) => (
-                  <p key={i} className="text-slate-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: p }} />
+                  <p key={i} className="text-slate-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
                 ))}
               </div>
             )}
@@ -302,7 +303,7 @@ export default function BlogPostPage() {
                 </figure>
                 <div className="space-y-4">
                   {bodyParas.map((p, i) => (
-                    <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+                    <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
                   ))}
                 </div>
               </div>
@@ -321,7 +322,7 @@ export default function BlogPostPage() {
                 {bodyParas.length > 0 && (
                   <div className="space-y-4 mb-8">
                     {bodyParas.map((p, i) => (
-                      <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+                      <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
                     ))}
                   </div>
                 )}
@@ -341,7 +342,7 @@ export default function BlogPostPage() {
                 </figure>
                 <div className="space-y-4">
                   {conclusionParas.map((p, i) => (
-                    <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+                    <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
                   ))}
                 </div>
               </div>
@@ -360,7 +361,7 @@ export default function BlogPostPage() {
                 {conclusionParas.length > 0 && (
                   <div className="space-y-4 mb-8">
                     {conclusionParas.map((p, i) => (
-                      <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+                      <p key={i} className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(p) }} />
                     ))}
                   </div>
                 )}

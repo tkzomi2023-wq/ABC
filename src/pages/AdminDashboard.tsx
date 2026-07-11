@@ -180,6 +180,7 @@ export default function AdminDashboard() {
       { data: dlData },
       { data: photosData },
       { data: settingsData },
+      { data: secretsData },
       { data: messagesData },
       { data: boardData },
     ] = await Promise.all([
@@ -190,12 +191,14 @@ export default function AdminDashboard() {
       supabase.from('downloads').select('*').order('created_at', { ascending: false }),
       supabase.from('photos').select('*').order('created_at', { ascending: false }),
       supabase.from('site_settings').select('*'),
+      supabase.from('payment_secrets').select('*'),
       supabase.from('contact_messages').select('*').order('submitted_at', { ascending: false }),
       supabase.from('board_members').select('*').order('display_order'),
     ]);
 
     const u = usersData ?? [];
     const s = settingsData ?? [];
+    const sec = secretsData ?? [];
 
     setUsers(u);
     setNotices(noticesData ?? []);
@@ -228,11 +231,12 @@ export default function AdminDashboard() {
     setGreetingTitle(getSetting('principal_greeting_title'));
     setGreetingImageUrl(getSetting('principal_greeting_image'));
 
-    // Razorpay
+    // Razorpay (non-secret settings from site_settings, secrets from payment_secrets)
     setRazorpayEnabled(getSetting('razorpay_enabled') === 'true');
     setRazorpayKeyId(getSetting('razorpay_key_id'));
-    setRazorpayKeySecret(getSetting('razorpay_key_secret'));
-    setRazorpayWebhookSecret(getSetting('razorpay_webhook_secret'));
+    const getSecret = (key: string) => sec.find((x: { secret_key: string; secret_value: string }) => x.secret_key === key)?.secret_value ?? '';
+    setRazorpayKeySecret(getSecret('razorpay_key_secret'));
+    setRazorpayWebhookSecret(getSecret('razorpay_webhook_secret'));
 
     // Role themes
     const loadedThemes = { ...roleThemes };
@@ -724,14 +728,26 @@ export default function AdminDashboard() {
     e.preventDefault();
     setPaymentSettingsSaving(true);
     setPaymentSettingsSuccess(false);
-    const updates = [
+    // Non-secret settings go to site_settings
+    const publicUpdates = [
       { key: 'razorpay_enabled', value: razorpayEnabled ? 'true' : 'false' },
       { key: 'razorpay_key_id', value: razorpayKeyId },
+    ];
+    for (const u of publicUpdates) {
+      await supabase.from('site_settings').update({ setting_value: u.value }).eq('setting_key', u.key);
+    }
+    // Secret values go to payment_secrets (admin-only RLS)
+    const secretUpdates = [
       { key: 'razorpay_key_secret', value: razorpayKeySecret },
       { key: 'razorpay_webhook_secret', value: razorpayWebhookSecret },
     ];
-    for (const u of updates) {
-      await supabase.from('site_settings').update({ setting_value: u.value }).eq('setting_key', u.key);
+    for (const s of secretUpdates) {
+      const { data: existing } = await supabase.from('payment_secrets').select('secret_key').eq('secret_key', s.key).maybeSingle();
+      if (existing) {
+        await supabase.from('payment_secrets').update({ secret_value: s.value }).eq('secret_key', s.key);
+      } else {
+        await supabase.from('payment_secrets').insert({ secret_key: s.key, secret_value: s.value });
+      }
     }
     setPaymentSettingsSaving(false);
     setPaymentSettingsSuccess(true);
