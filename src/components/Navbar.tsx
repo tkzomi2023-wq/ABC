@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown, User, LogOut, LayoutDashboard, CreditCard, Bell, BellOff, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import DarkModeToggle from './DarkModeToggle';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -221,6 +222,7 @@ export default function Navbar() {
 
           {/* Desktop: Auth buttons / user menu */}
           <div className="hidden md:flex items-center gap-1 flex-shrink-0">
+            <DarkModeToggle />
             {user ? (
               <>
                 {/* Desktop notification bell */}
@@ -368,8 +370,9 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile: Notification bell (logged in only) + Hamburger */}
+          {/* Mobile: Dark mode toggle + Notification bell (logged in only) + Hamburger */}
           <div className="relative flex md:hidden items-center gap-1 flex-shrink-0" ref={mobileNotifRef}>
+            <DarkModeToggle />
             {user && (
               <button
                 onClick={() => setNotifOpen((v) => !v)}

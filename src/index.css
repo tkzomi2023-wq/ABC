@@ -11,12 +11,44 @@
 }
 
 @layer base {
+  :root {
+    --color-bg: 248 250 252;        /* slate-50 */
+    --color-bg-elevated: 255 255 255; /* white */
+    --color-text: 30 41 59;          /* slate-800 */
+    --color-text-muted: 71 85 105;   /* slate-600 */
+    --color-border: 226 232 240;     /* slate-200 */
+    --color-input-bg: 255 255 255;
+    --color-input-border: 203 213 225; /* slate-300 */
+    --color-navy: 17 22 64;          /* navy-950 */
+    --color-navy-text: 255 255 255;
+    --color-gold: 245 158 11;        /* gold-500 */
+    --color-card-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --transition-theme: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .dark {
+    --color-bg: 15 23 42;            /* slate-900 */
+    --color-bg-elevated: 30 41 59;    /* slate-800 */
+    --color-text: 226 232 240;       /* slate-200 */
+    --color-text-muted: 148 163 184;  /* slate-400 */
+    --color-border: 51 65 85;         /* slate-700 */
+    --color-input-bg: 30 41 59;       /* slate-800 */
+    --color-input-border: 71 85 105; /* slate-600 */
+    --color-navy: 2 6 23;             /* slate-950 */
+    --color-navy-text: 226 232 240;
+    --color-gold: 251 191 36;         /* amber-300 */
+    --color-card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
   html {
     scroll-behavior: smooth;
   }
 
   body {
-    @apply font-sans text-slate-800 bg-slate-50 antialiased;
+    @apply font-sans antialiased;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+    transition: var(--transition-theme);
   }
 
   h1, h2, h3 {
@@ -75,6 +107,48 @@
 
   .page-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer components {
+  .dark .card {
+    @apply bg-slate-800 border-slate-700;
+  }
+
+  .dark .input-field {
+    @apply bg-slate-800 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-amber-400 focus:border-amber-400;
+  }
+
+  .dark .label {
+    @apply text-slate-300;
+  }
+
+  .dark .section-title {
+    @apply text-slate-100;
+  }
+
+  .dark .section-subtitle {
+    @apply text-slate-400;
+  }
+
+  .dark .btn-primary {
+    @apply bg-amber-500 hover:bg-amber-600 text-slate-900;
+  }
+
+  .dark .btn-secondary {
+    @apply border-amber-400 text-amber-400 hover:bg-slate-700;
+  }
+
+  .dark .badge-admin {
+    @apply bg-red-900/50 text-red-300;
+  }
+
+  .dark .badge-faculty {
+    @apply bg-slate-700 text-slate-200;
+  }
+
+  .dark .badge-student {
+    @apply bg-amber-900/40 text-amber-300;
   }
 }
 
