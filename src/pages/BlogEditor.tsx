@@ -7,6 +7,7 @@ import {
 import { supabase, BlogPost } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import RichTextEditor from '../components/RichTextEditor';
+import { compressImage, buildStoragePath } from '../lib/imageCompress';
 
 const DRAFT_KEY = 'blog_editor_draft';
 
@@ -136,9 +137,10 @@ export default function BlogEditor() {
   async function uploadImage(field: keyof Draft, file: File) {
     setUploading(field);
     setError('');
-    const ext = file.name.split('.').pop();
-    const fileName = `blog/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('photos').upload(fileName, file, { upsert: true });
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
+    const fileName = buildStoragePath('blog', draft.title || 'blog-image', ext);
+    const { error: upErr } = await supabase.storage.from('photos').upload(fileName, compressed, { upsert: true, contentType: compressed.type });
     if (upErr) {
       setError(upErr.message);
       setUploading(null);

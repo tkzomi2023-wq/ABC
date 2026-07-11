@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, User, Loader, AlertCircle, Hash, X, Maximize2, Log
 import { supabase, BlogPost } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { sanitizeHtml } from '../lib/sanitize';
+import ResponsiveImage from '../components/ResponsiveImage';
 
 function renderParagraphs(text: string | null): string[] {
   if (!text) return [];
@@ -243,11 +244,13 @@ export default function BlogPostPage() {
         {/* ── FEATURED IMAGE ── always visible */}
         {post.featured_image_url && (
           <figure className="mb-8">
-            <img
+            <ResponsiveImage
               src={post.featured_image_url}
               alt={post.title}
               className="w-full rounded-2xl shadow-lg object-cover max-h-[500px] cursor-zoom-in transition-transform hover:scale-[1.01]"
-              onClick={() => setLightbox(post.featured_image_url!)}
+              loading="eager"
+              widths={[800, 1200, 1600]}
+              sizes="(max-width: 768px) 100vw, 800px"
             />
           </figure>
         )}
@@ -294,11 +297,12 @@ export default function BlogPostPage() {
             {post.supporting_image_url && bodyParas.length > 0 ? (
               <div className="mb-8 clearfix">
                 <figure className="float-none sm:float-right ml-0 sm:ml-6 mb-4 w-full sm:w-[35%]">
-                  <img
+                  <ResponsiveImage
                     src={post.supporting_image_url}
                     alt={post.title}
                     className="w-full rounded-2xl shadow-lg object-cover max-h-[500px] cursor-zoom-in transition-transform hover:scale-[1.01]"
-                    onClick={() => setLightbox(post.supporting_image_url!)}
+                    widths={[400, 800]}
+                    sizes="(max-width: 768px) 100vw, 35vw"
                   />
                 </figure>
                 <div className="space-y-4">
@@ -311,11 +315,12 @@ export default function BlogPostPage() {
               <>
                 {post.supporting_image_url && (
                   <figure className="my-10 flex justify-end">
-                    <img
+                    <ResponsiveImage
                       src={post.supporting_image_url}
                       alt={post.title}
                       className="w-full md:w-3/4 rounded-2xl shadow-lg object-cover max-h-[400px] cursor-zoom-in transition-transform hover:scale-[1.01]"
-                      onClick={() => setLightbox(post.supporting_image_url!)}
+                      widths={[400, 800]}
+                      sizes="(max-width: 768px) 100vw, 75vw"
                     />
                   </figure>
                 )}
@@ -333,11 +338,12 @@ export default function BlogPostPage() {
             {post.second_image_url && conclusionParas.length > 0 ? (
               <div className="mb-8 clearfix">
                 <figure className="float-none sm:float-left mr-0 sm:mr-6 mb-4 w-full sm:w-[35%]">
-                  <img
+                  <ResponsiveImage
                     src={post.second_image_url}
                     alt={post.title}
                     className="w-full rounded-2xl shadow-lg object-cover max-h-[500px] cursor-zoom-in transition-transform hover:scale-[1.01]"
-                    onClick={() => setLightbox(post.second_image_url!)}
+                    widths={[400, 800]}
+                    sizes="(max-width: 768px) 100vw, 35vw"
                   />
                 </figure>
                 <div className="space-y-4">
@@ -350,11 +356,12 @@ export default function BlogPostPage() {
               <>
                 {post.second_image_url && (
                   <figure className="my-10 flex justify-start">
-                    <img
+                    <ResponsiveImage
                       src={post.second_image_url}
                       alt={post.title}
                       className="w-full md:w-3/4 rounded-2xl shadow-lg object-cover max-h-[400px] cursor-zoom-in transition-transform hover:scale-[1.01]"
-                      onClick={() => setLightbox(post.second_image_url!)}
+                      widths={[400, 800]}
+                      sizes="(max-width: 768px) 100vw, 75vw"
                     />
                   </figure>
                 )}
@@ -410,7 +417,7 @@ export default function BlogPostPage() {
             className="flex items-center justify-center w-full h-full p-4 sm:p-8 md:p-12"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
+            <ResponsiveImage
               src={lightbox}
               alt="Full view"
               className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"

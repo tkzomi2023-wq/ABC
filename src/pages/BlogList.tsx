@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, User, Loader, Newspaper, X, Hash, Eye } from 'lucide-react';
 import { supabase, BlogPost } from '../lib/supabase';
+import ResponsiveImage from '../components/ResponsiveImage';
 
 export default function BlogList() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -127,35 +128,43 @@ function BlogCard({ post }: { post: BlogPost }) {
       {/* Collage background */}
       {images.length > 0 ? (
         images.length === 1 ? (
-          <img
+          <ResponsiveImage
             src={images[0]}
             alt={post.title}
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            widths={[400, 800, 1200]}
+            sizes="(max-width: 768px) 100vw, 33vw"
           />
         ) : images.length === 2 ? (
           <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
             {images.slice(0, 2).map((img, idx) => (
-              <img
+              <ResponsiveImage
                 key={idx}
                 src={img}
-                alt={post.title}
+                alt={idx === 0 ? post.title : ''}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                widths={[200, 400, 600]}
+                sizes="(max-width: 768px) 50vw, 16vw"
               />
             ))}
           </div>
         ) : (
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5">
-            <img
+            <ResponsiveImage
               src={images[0]}
               alt={post.title}
               className="col-span-2 row-span-1 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              widths={[400, 800]}
+              sizes="(max-width: 768px) 100vw, 33vw"
             />
             {images.slice(1, 3).map((img, idx) => (
-              <img
+              <ResponsiveImage
                 key={idx}
                 src={img}
-                alt={post.title}
+                alt=""
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                widths={[200, 400]}
+                sizes="(max-width: 768px) 50vw, 16vw"
               />
             ))}
           </div>

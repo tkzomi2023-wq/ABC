@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MapPin, Briefcase, Award, BookOpen, User, Mail, Phone, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ResponsiveImage from '../components/ResponsiveImage';
 
 type FilterType = 'current' | 'former' | 'board';
 
@@ -157,10 +158,12 @@ export default function Teachers() {
                         <div className="absolute inset-0 rounded-full border-2 border-gold-400 group-hover:scale-105 transition-transform duration-300" />
                         <div className="absolute inset-1.5 rounded-full overflow-hidden bg-slate-100">
                           {member.photo_url ? (
-                            <img
+                            <ResponsiveImage
                               src={member.photo_url}
                               alt={member.name}
                               className="w-full h-full object-cover"
+                              widths={[200, 400]}
+                              sizes="(max-width: 768px) 50vw, 25vw"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-navy-100 to-navy-200">
@@ -278,11 +281,12 @@ export default function Teachers() {
                         {/* Photo side */}
                         <div className="w-full md:w-56 lg:w-72 flex-shrink-0 bg-slate-100 relative overflow-hidden min-h-[200px] md:min-h-0 rounded-t-xl md:rounded-none">
                           {member.photo_url ? (
-                            <img
+                            <ResponsiveImage
                               src={member.photo_url}
                               alt={member.full_name}
                               className="w-full h-full object-cover"
-                              style={{ minHeight: '220px' }}
+                              widths={[200, 400]}
+                              sizes="(max-width: 768px) 50vw, 25vw"
                             />
                           ) : (
                             <div className="flex flex-col items-center justify-center h-full min-h-[220px] bg-gradient-to-br from-slate-100 to-slate-200">

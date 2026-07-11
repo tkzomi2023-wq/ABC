@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { BookOpen, Target, Eye, Heart, Award, Users, MapPin, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ResponsiveImage from '../components/ResponsiveImage';
 
 function AnimatedCounter({ value, label, icon: Icon }: { value: number; label: string; icon: React.ElementType }) {
   const [count, setCount] = useState(0);
@@ -120,25 +121,33 @@ export default function AboutUs() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <img
+              <ResponsiveImage
                 src={siteImages.about_image_1 || defaultImages.about_image_1}
                 alt="College campus"
                 className="rounded-xl h-48 w-full object-cover"
+                widths={[300, 600]}
+                sizes="50vw"
               />
-              <img
+              <ResponsiveImage
                 src={siteImages.about_image_2 || defaultImages.about_image_2}
                 alt="Students studying"
                 className="rounded-xl h-48 w-full object-cover mt-8"
+                widths={[300, 600]}
+                sizes="50vw"
               />
-              <img
+              <ResponsiveImage
                 src={siteImages.about_image_3 || defaultImages.about_image_3}
                 alt="Chapel"
                 className="rounded-xl h-48 w-full object-cover -mt-4"
+                widths={[300, 600]}
+                sizes="50vw"
               />
-              <img
+              <ResponsiveImage
                 src={siteImages.about_image_4 || defaultImages.about_image_4}
                 alt="Library"
                 className="rounded-xl h-48 w-full object-cover mt-4"
+                widths={[300, 600]}
+                sizes="50vw"
               />
             </div>
           </div>

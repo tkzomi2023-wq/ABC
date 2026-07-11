@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import {
   BookOpen, Bell, Users, Download, Image, ChevronRight,
   Award, MapPin, Calendar, Star, ArrowRight, Megaphone, ChevronLeft,
-  Newspaper, ArrowUpRight, User, Hash, Eye,
+  Newspaper, User, Eye,
 } from 'lucide-react';
 import { supabase, Notice, Photo, BlogPost } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import DailyVerse from '../components/DailyVerse';
+import ResponsiveImage from '../components/ResponsiveImage';
 
 function GallerySlider({ photos, rounded = true }: { photos: Photo[]; rounded?: boolean }) {
   const [current, setCurrent] = useState(0);
@@ -41,10 +42,13 @@ function GallerySlider({ photos, rounded = true }: { photos: Photo[]; rounded?: 
           key={photo.id}
           className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
         >
-          <img
+          <ResponsiveImage
             src={photo.image_url}
             alt={photo.title ?? ''}
             className="w-full h-full object-cover"
+            loading={i === 0 ? 'eager' : 'lazy'}
+            widths={[400, 800, 1200]}
+            sizes="100vw"
           />
           {photo.title && (
             <div className="absolute bottom-0 left-0 right-0 px-6 py-4 bg-gradient-to-t from-black/70 to-transparent">
@@ -173,35 +177,43 @@ function BlogPreviewCard({ post }: { post: BlogPost }) {
       {/* Collage background */}
       {images.length > 0 ? (
         images.length === 1 ? (
-          <img
+          <ResponsiveImage
             src={images[0]}
             alt={post.title}
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            widths={[400, 800, 1200]}
+            sizes="(max-width: 768px) 100vw, 33vw"
           />
         ) : images.length === 2 ? (
           <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
             {images.slice(0, 2).map((img, idx) => (
-              <img
+              <ResponsiveImage
                 key={idx}
                 src={img}
-                alt={post.title}
+                alt={idx === 0 ? post.title : ''}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                widths={[200, 400, 600]}
+                sizes="(max-width: 768px) 50vw, 16vw"
               />
             ))}
           </div>
         ) : (
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5">
-            <img
+            <ResponsiveImage
               src={images[0]}
               alt={post.title}
               className="col-span-2 row-span-1 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              widths={[400, 800]}
+              sizes="(max-width: 768px) 100vw, 33vw"
             />
             {images.slice(1, 3).map((img, idx) => (
-              <img
+              <ResponsiveImage
                 key={idx}
                 src={img}
-                alt={post.title}
+                alt=""
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                widths={[200, 400]}
+                sizes="(max-width: 768px) 50vw, 16vw"
               />
             ))}
           </div>
@@ -415,10 +427,12 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {notices.map((notice) => (
                 <div key={notice.id} className="group relative h-64 rounded-2xl overflow-hidden shadow-lg">
-                  <img
+                  <ResponsiveImage
                     src={notice.image_url || `https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg?auto=compress&cs=tinysrgb&w=800`}
                     alt={notice.title}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    widths={[400, 600, 800]}
+                    sizes="(max-width: 768px) 100vw, 33vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
                   <div className="absolute inset-0 p-5 flex flex-col justify-end">
@@ -501,10 +515,12 @@ export default function Home() {
               </div>
             </div>
             <div className="relative">
-              <img
+              <ResponsiveImage
                 src={siteImages.home_about_image || defaultImages.home_about_image}
-                alt="College building"
+                alt="Aizawl Bible College campus building"
                 className="rounded-2xl shadow-xl w-full object-cover h-80 lg:h-96"
+                widths={[400, 800]}
+                sizes="(max-width: 1024px) 100vw, 50vw"
               />
               <div className="absolute -bottom-4 -left-4 bg-navy-800 text-white rounded-xl p-4 shadow-lg">
                 <p className="text-2xl font-serif font-bold">25+</p>

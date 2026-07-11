@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Bell, Filter, Calendar, AlertTriangle, BookOpen, DollarSign, Star, Info, Share2, Check, X } from 'lucide-react';
 import { supabase, Notice } from '../lib/supabase';
+import ResponsiveImage from '../components/ResponsiveImage';
 
 const categories = ['all', 'academic', 'event', 'general', 'urgent', 'financial'] as const;
 type Category = typeof categories[number];
@@ -144,10 +145,12 @@ export default function NoticeBoard() {
                     {/* Notice image (thumbnail/banner) */}
                     {notice.image_url && (
                       <div className="w-full h-44 overflow-hidden flex-shrink-0 bg-slate-100">
-                        <img
+                        <ResponsiveImage
                           src={notice.image_url}
                           alt={notice.title}
                           className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                          widths={[300, 600, 800]}
+                          sizes="(max-width: 768px) 100vw, 33vw"
                         />
                       </div>
                     )}
@@ -192,7 +195,7 @@ export default function NoticeBoard() {
             {/* Banner image in modal */}
             {selected.image_url && (
               <div className="w-full h-52 flex-shrink-0 overflow-hidden bg-slate-100">
-                <img src={selected.image_url} alt={selected.title} className="w-full h-full object-cover" />
+                <ResponsiveImage src={selected.image_url} alt={selected.title} className="w-full h-full object-cover" widths={[400, 800]} sizes="(max-width: 768px) 100vw, 50vw" />
               </div>
             )}
             <div className="p-6 md:p-8 overflow-y-auto">

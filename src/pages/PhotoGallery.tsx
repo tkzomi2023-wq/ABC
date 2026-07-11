@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, Upload, X, ChevronLeft, ChevronRight, AlertCircle, Loader, ExternalLink } from 'lucide-react';
 import { supabase, Photo } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { compressImage, buildStoragePath } from '../lib/imageCompress';
 
 type UploadForm = { title: string; description: string; album: string; link_url: string; files: File[] };
 
@@ -56,9 +57,10 @@ export default function PhotoGallery() {
       const file = uploadForm.files[i];
       setUploadProgress({ current: i + 1, total: uploadForm.files.length });
 
-      const ext = file.name.split('.').pop();
-      const fileName = `gallery/${Date.now()}_${i}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from('photos').upload(fileName, file);
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split('.').pop();
+      const fileName = buildStoragePath('gallery', uploadForm.title || file.name.replace(/\.[^.]+$/, ''), ext);
+      const { error: uploadErr } = await supabase.storage.from('photos').upload(fileName, compressed, { contentType: compressed.type });
 
       if (uploadErr) {
         setUploadError(`Failed to upload ${file.name}: ${uploadErr.message}`);

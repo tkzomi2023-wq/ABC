@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, Plus, Trash2, Upload, Loader, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ResponsiveImage from '../components/ResponsiveImage';
 import { useAuth } from '../contexts/AuthContext';
 
 type BoardMember = {
@@ -140,7 +141,7 @@ export default function BoardOfManagement() {
                 <label className="label">Photo (optional)</label>
                 <div className="flex items-center gap-3">
                   {form.photo_url && (
-                    <img src={form.photo_url} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                    <ResponsiveImage src={form.photo_url} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" widths={[80]} sizes="40px" />
                   )}
                   <label htmlFor="board-photo-upload" className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploading ? 'bg-slate-100 text-slate-400' : 'bg-navy-800 text-white hover:bg-navy-700'}`}>
                     {uploading ? <><Loader className="w-4 h-4 animate-spin" /> Uploading...</> : <><Upload className="w-4 h-4" /> Upload Photo</>}
@@ -193,7 +194,7 @@ export default function BoardOfManagement() {
                 )}
                 <div className="w-20 h-20 rounded-full mx-auto mb-4 overflow-hidden border-4 border-gold-200 bg-navy-100 flex items-center justify-center">
                   {member.photo_url ? (
-                    <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                    <ResponsiveImage src={member.photo_url} alt={member.name} className="w-full h-full object-cover" widths={[200, 400]} sizes="(max-width: 768px) 50vw, 25vw" />
                   ) : (
                     <span className="text-navy-700 text-2xl font-bold">{member.name[0]}</span>
                   )}

@@ -11,6 +11,7 @@ import {
 import { supabase, Profile, Notice, Teacher, SiteSetting, ContactMessage, Download as DownloadType, Photo } from '../lib/supabase';
 import { THEMES } from '../lib/themes';
 import { useAuth } from '../contexts/AuthContext';
+import { compressImage, buildStoragePath } from '../lib/imageCompress';
 
 type Tab = 'overview' | 'users' | 'students' | 'graduated' | 'faculty' | 'admins' | 'notices' | 'applications' | 'downloads' | 'certificates' | 'settings' | 'payment' | 'messages';
 
@@ -343,9 +344,10 @@ export default function AdminDashboard() {
     setSettingUploading(settingKey);
     setSettingsError('');
     setSettingsSuccess(false);
-    const ext = file.name.split('.').pop();
-    const fileName = `site/${settingKey}_${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('photos').upload(fileName, file, { upsert: true });
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
+    const fileName = buildStoragePath('site', settingKey, ext);
+    const { error: upErr } = await supabase.storage.from('photos').upload(fileName, compressed, { upsert: true, contentType: compressed.type });
     if (upErr) { setSettingsError(upErr.message); setSettingUploading(null); return; }
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
     await supabase.from('site_settings').update({ setting_value: publicUrl }).eq('setting_key', settingKey);
@@ -390,9 +392,10 @@ export default function AdminDashboard() {
 
   async function uploadGreetingImage(file: File) {
     setGreetingImageUploading(true);
-    const ext = file.name.split('.').pop();
-    const fileName = `site/greeting_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('photos').upload(fileName, file, { upsert: true });
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
+    const fileName = buildStoragePath('site', 'principal-greeting', ext);
+    const { error } = await supabase.storage.from('photos').upload(fileName, compressed, { upsert: true, contentType: compressed.type });
     if (error) { setGreetingImageUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
     setGreetingImageUrl(publicUrl);
@@ -535,9 +538,10 @@ export default function AdminDashboard() {
   // ── Notices ──────────────────────────────────────────────────
   async function uploadNoticeImage(file: File): Promise<string | null> {
     setNoticeImageUploading(true);
-    const ext = file.name.split('.').pop();
-    const fileName = `notices/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('photos').upload(fileName, file, { upsert: true });
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
+    const fileName = buildStoragePath('notices', noticeForm.title || 'notice', ext);
+    const { error } = await supabase.storage.from('photos').upload(fileName, compressed, { upsert: true, contentType: compressed.type });
     if (error) { setNoticeImageUploading(false); return null; }
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
     setNoticeImageUploading(false);
@@ -582,9 +586,10 @@ export default function AdminDashboard() {
   // ── Teachers ─────────────────────────────────────────────────
   async function uploadTeacherPhoto(file: File): Promise<string | null> {
     setTeacherPhotoUploading(true);
-    const ext = file.name.split('.').pop();
-    const path = `faculty/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true });
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
+    const path = buildStoragePath('faculty', teacherForm.full_name || 'teacher', ext);
+    const { error } = await supabase.storage.from('photos').upload(path, compressed, { upsert: true, contentType: compressed.type });
     if (error) { setTeacherPhotoUploading(false); return null; }
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(path);
     setTeacherPhotoUploading(false);
@@ -670,9 +675,10 @@ export default function AdminDashboard() {
   // ── Board members ────────────────────────────────────────────
   async function uploadBoardPhoto(file: File): Promise<string | null> {
     setBoardPhotoUploading(true);
-    const ext = file.name.split('.').pop();
-    const fileName = `board/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('photos').upload(fileName, file, { upsert: true });
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
+    const fileName = buildStoragePath('board', boardEditForm.name || 'board-member', ext);
+    const { error } = await supabase.storage.from('photos').upload(fileName, compressed, { upsert: true, contentType: compressed.type });
     if (error) { setBoardPhotoUploading(false); return null; }
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
     setBoardPhotoUploading(false);
