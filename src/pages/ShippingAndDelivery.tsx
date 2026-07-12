@@ -1,240 +1,139 @@
-import { Truck } from 'lucide-react';
+import { FileText, Truck, Download, Monitor, Clock, Mail } from 'lucide-react';
+
+type PolicySection = {
+  title: string;
+  paragraphs: string[];
+};
+
+const SECTIONS: PolicySection[] = [
+  {
+    title: '1. Overview',
+    paragraphs: [
+      'Aizawl Bible College offers a range of digital products including downloadable study materials, e-books, recorded lectures, and other electronic resources. This Shipping and Delivery Policy explains how these digital products are delivered to you.',
+      'Since all our products are digital, there are no physical goods shipped and no shipping charges applied.',
+    ],
+  },
+  {
+    title: '2. Digital Product Delivery',
+    paragraphs: [
+      'Upon successful completion of your payment, digital products will be made available to you immediately through your account on our website or via a download link sent to your registered email address.',
+      'Most digital products are delivered instantly. In some cases, delivery may take up to 24 hours due to processing or technical verification. If you do not receive your digital product within 24 hours, please contact us.',
+    ],
+  },
+  {
+    title: '3. Accessing Your Downloads',
+    paragraphs: [
+      'You can access your purchased digital products in the following ways:',
+      'Through your account dashboard on the website, where all purchased and available downloads are listed.',
+      'Through a direct download link sent to your email address at the time of purchase.',
+      'Download links are valid for 30 days from the date of purchase. Please download and save your files before the link expires.',
+    ],
+  },
+  {
+    title: '4. System Requirements',
+    paragraphs: [
+      'To access and use our digital products, you will need:',
+      'A device (computer, tablet, or smartphone) with an internet connection.',
+      'A modern web browser such as Chrome, Firefox, Safari, or Edge.',
+      'Appropriate software to open the downloaded files, such as a PDF reader for PDF documents or a media player for video and audio recordings.',
+    ],
+  },
+  {
+    title: '5. Download Limits',
+    paragraphs: [
+      'Unless otherwise specified, each digital product may be downloaded up to 5 times per purchase. This limit helps us manage server resources and prevent unauthorized distribution.',
+      'If you experience issues with your downloads or need additional download attempts, please contact us and we will assist you.',
+    ],
+  },
+  {
+    title: '6. Technical Issues',
+    paragraphs: [
+      'If you encounter technical difficulties while downloading or accessing a digital product, please contact us at info@aizawlbiblecollege.edu.in with details of the issue, your purchase receipt, and your account information. We will provide support and, if necessary, issue a replacement download link.',
+    ],
+  },
+  {
+    title: '7. No Physical Shipping',
+    paragraphs: [
+      'Aizawl Bible College does not ship physical products. All items available for purchase on our website are delivered electronically. There are no shipping fees, handling charges, or delivery delays associated with physical transit.',
+    ],
+  },
+  {
+    title: '8. Changes to This Policy',
+    paragraphs: [
+      'We reserve the right to update or modify this Shipping and Delivery Policy at any time. Any changes will be posted on this page with an updated revision date.',
+    ],
+  },
+  {
+    title: '9. Contact Us',
+    paragraphs: [
+      'If you have any questions about this policy or need assistance with a digital product, please contact us at info@aizawlbiblecollege.edu.in or by mail at Aizawl Bible College, Aizawl, Mizoram 796001, India.',
+    ],
+  },
+];
 
 export default function ShippingAndDelivery() {
   return (
-    <div className="page-enter min-h-screen bg-slate-50 py-12">
-      <div className="page-container max-w-4xl">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-          <div className="bg-navy-950 px-6 py-8 text-center">
-            <Truck className="w-10 h-10 text-gold-400 mx-auto mb-3" />
-            <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">Shipping & Delivery Policy</h1>
-            <p className="text-slate-400 text-sm mt-2">Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          </div>
+    <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
+      <section className="bg-navy-800 dark:bg-navy-900 text-white py-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <Truck className="w-12 h-12 text-gold-400 mx-auto mb-4" />
+          <h1 className="text-4xl sm:text-5xl font-serif font-bold mb-4">Shipping and Delivery</h1>
+          <p className="text-navy-100 dark:text-navy-300 text-lg">
+            Information about delivery of our digital products
+          </p>
         </div>
+      </section>
 
-        {/* Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-          <div className="prose prose-navy max-w-none">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-              <p className="text-blue-800 text-sm leading-relaxed">
-                <strong>Note:</strong> Aizawl Bible College is primarily an educational institution. This Shipping & Delivery Policy applies to the delivery of certificates, official documents, study materials, and other items that may be requested by students and graduates.
-              </p>
+      <article className="max-w-3xl mx-auto px-4 py-12">
+        <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-800 p-6 sm:p-10">
+          <div className="flex items-center gap-2 text-sm text-navy-500 dark:text-navy-400 mb-8 pb-6 border-b border-navy-100 dark:border-navy-800">
+            <FileText className="w-4 h-4" />
+            <span>Last updated: January 2025</span>
+          </div>
+
+          <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex flex-col items-center text-center p-4 rounded-lg bg-navy-50 dark:bg-navy-800">
+              <Download className="w-8 h-8 text-navy-600 dark:text-gold-400 mb-2" />
+              <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50">Instant Access</h3>
+              <p className="text-xs text-navy-600 dark:text-navy-300 mt-1">Download immediately after purchase</p>
             </div>
+            <div className="flex flex-col items-center text-center p-4 rounded-lg bg-navy-50 dark:bg-navy-800">
+              <Monitor className="w-8 h-8 text-navy-600 dark:text-gold-400 mb-2" />
+              <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50">Digital Only</h3>
+              <p className="text-xs text-navy-600 dark:text-navy-300 mt-1">No physical items shipped</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-4 rounded-lg bg-navy-50 dark:bg-navy-800">
+              <Clock className="w-8 h-8 text-navy-600 dark:text-gold-400 mb-2" />
+              <h3 className="text-sm font-semibold text-navy-900 dark:text-navy-50">30-Day Window</h3>
+              <p className="text-xs text-navy-600 dark:text-navy-300 mt-1">Links valid for 30 days</p>
+            </div>
+          </div>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">1. Document Delivery Services</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                The college provides delivery services for the following documents and materials:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Academic transcripts and mark sheets</li>
-                <li>Graduation certificates</li>
-                <li>Character certificates</li>
-                <li>Migration certificates</li>
-                <li>Official letters and recommendation letters</li>
-                <li>Study materials (for distance education programs if applicable)</li>
-                <li>Identity cards (for new students)</li>
-              </ul>
-            </section>
+          <div className="space-y-10">
+            {SECTIONS.map((section) => (
+              <section key={section.title}>
+                <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4">
+                  {section.title}
+                </h2>
+                <div className="space-y-3">
+                  {section.paragraphs.map((para, i) => (
+                    <p key={i} className="text-navy-700 dark:text-navy-200 leading-relaxed text-sm sm:text-base">
+                      {para}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">2. Processing Time</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Document processing times are as follows:
-              </p>
-              <div className="bg-slate-50 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-navy-800 text-white">
-                      <th className="px-4 py-3 text-left font-medium">Document Type</th>
-                      <th className="px-4 py-3 text-left font-medium">Processing Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Certificates (Graduation)</td>
-                      <td className="px-4 py-3 text-slate-700">5-7 working days</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Transcripts</td>
-                      <td className="px-4 py-3 text-slate-700">3-5 working days</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Character Certificate</td>
-                      <td className="px-4 py-3 text-slate-700">2-3 working days</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Migration Certificate</td>
-                      <td className="px-4 py-3 text-slate-700">5-7 working days</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Recommendation Letters</td>
-                      <td className="px-4 py-3 text-slate-700">2-3 working days</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Identity Cards</td>
-                      <td className="px-4 py-3 text-slate-700">3-5 working days</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">3. Delivery Methods</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Documents can be delivered through the following methods:
-              </p>
-
-              <h3 className="text-lg font-semibold text-navy-800 mb-2">In-Person Collection</h3>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Documents can be collected in person from the college office during working hours (9:00 AM - 4:00 PM, Monday to Friday). A valid ID proof is required for collection.
-              </p>
-
-              <h3 className="text-lg font-semibold text-navy-800 mb-2">Postal Delivery (Standard)</h3>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2 mb-4">
-                <li>Delivery through India Post (Registered Post)</li>
-                <li>Delivery time: 7-15 working days (depending on location)</li>
-                <li>Tracking number provided via email</li>
-                <li>Cost: Standard postal charges apply</li>
-              </ul>
-
-              <h3 className="text-lg font-semibold text-navy-800 mb-2">Courier Delivery (Express)</h3>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Delivery through professional courier services</li>
-                <li>Delivery time: 3-7 working days</li>
-                <li>Full tracking available</li>
-                <li>Cost: Higher courier charges apply</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">4. Delivery Charges</h2>
-              <div className="bg-slate-50 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-navy-800 text-white">
-                      <th className="px-4 py-3 text-left font-medium">Delivery Type</th>
-                      <th className="px-4 py-3 text-left font-medium">Destination</th>
-                      <th className="px-4 py-3 text-left font-medium">Estimated Cost</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Standard Post</td>
-                      <td className="px-4 py-3 text-slate-700">Within Mizoram</td>
-                      <td className="px-4 py-3 text-slate-700">Rs. 50-100</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Standard Post</td>
-                      <td className="px-4 py-3 text-slate-700">Rest of India</td>
-                      <td className="px-4 py-3 text-slate-700">Rs. 100-150</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Express Courier</td>
-                      <td className="px-4 py-3 text-slate-700">Within Mizoram</td>
-                      <td className="px-4 py-3 text-slate-700">Rs. 100-150</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">Express Courier</td>
-                      <td className="px-4 py-3 text-slate-700">Rest of India</td>
-                      <td className="px-4 py-3 text-slate-700">Rs. 200-400</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-slate-700">International</td>
-                      <td className="px-4 py-3 text-slate-700">Outside India</td>
-                      <td className="px-4 py-3 text-slate-700">Actual cost + handling</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-xs text-slate-500 mt-3">
-                * Charges are subject to revision based on carrier rates. Actual charges will be communicated at the time of request.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">5. Document Request Process</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                To request document delivery:
-              </p>
-              <ol className="list-decimal pl-6 text-slate-600 space-y-2">
-                <li>Submit a written request to the Principal's Office</li>
-                <li>Specify document type and quantity required</li>
-                <li>Indicate preferred delivery method</li>
-                <li>Provide complete postal address with PIN code</li>
-                <li>Attach proof of payment for document fees</li>
-                <li>For authorized collection, submit authorization letter</li>
-              </ol>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">6. International Delivery</h2>
-              <p className="text-slate-600 leading-relaxed">
-                Documents requested for international delivery are sent through India Post International or professional international courier services (DHL, FedEx). Delivery time for international destinations is typically 10-20 working days. All customs duties and taxes in the destination country are the responsibility of the recipient. International delivery fees are charged at actual cost plus handling charges.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">7. Lost or Damaged Deliveries</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                In case of lost or damaged deliveries:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Report immediately to the college office within 48 hours</li>
-                <li>Provide tracking number and delivery details</li>
-                <li>The college will file a claim with the carrier</li>
-                <li>Duplicate documents will be issued subject to verification</li>
-                <li>Additional processing fees may apply for duplicate documents</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">8. Delivery Address Guidelines</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Please ensure the following for accurate delivery:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Complete address with house/flat number, street name, and landmarks</li>
-                <li>Correct city/town/village name</li>
-                <li>Accurate PIN code (6-digit)</li>
-                <li>Active mobile number for delivery coordination</li>
-                <li>Email address for tracking updates</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">9. Non-Delivery Conditions</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Delivery may be withheld or delayed in the following circumstances:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Incomplete or inaccurate address information</li>
-                <li>Outstanding fees or dues to the college</li>
-                <li>Disciplinary proceedings pending</li>
-                <li>Discrepancies in academic records requiring clarification</li>
-                <li>External circumstances beyond the college's control (strikes, natural disasters, etc.)</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">10. Contact for Delivery Queries</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                For delivery-related queries, please contact:
-              </p>
-              <div className="bg-slate-50 rounded-lg p-4">
-                <p className="font-medium text-navy-900">Office of the Principal</p>
-                <p className="text-slate-600">Aizawl Bible College</p>
-                <p className="text-slate-600">Post Box – 115, Tuikual North 'D' Mual</p>
-                <p className="text-slate-600">Aizawl – 796001, Mizoram, India</p>
-                <p className="text-slate-600 mt-2">Email: aizawlbiblecollege24@gmail.com</p>
-                <p className="text-slate-600">Phone: 9383007361 / 9862713689</p>
-              </div>
-            </section>
+          <div className="mt-10 pt-6 border-t border-navy-100 dark:border-navy-800">
+            <div className="flex items-center gap-2 text-sm text-navy-600 dark:text-navy-300">
+              <Mail className="w-4 h-4" />
+              <span>Need help? Contact us at info@aizawlbiblecollege.edu.in</span>
+            </div>
           </div>
         </div>
-      </div>
+      </article>
     </div>
   );
 }

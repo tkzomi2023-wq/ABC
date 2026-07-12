@@ -7,9 +7,7 @@ type Props = {
   loading?: 'lazy' | 'eager';
   widths?: number[];
   sizes?: string;
-  /** Aspect ratio in "W/H" form (e.g. "16/9") — sets aspect-ratio CSS to prevent CLS */
   aspectRatio?: string;
-  /** Fallback image if the src fails to load */
   fallbackSrc?: string;
   style?: React.CSSProperties;
 };

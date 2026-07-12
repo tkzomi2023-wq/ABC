@@ -60,7 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await fetchProfile(user.id);
   }
 
-  // Set up realtime subscription for profile changes
   useEffect(() => {
     if (user?.id && !profileChannelRef.current) {
       profileChannelRef.current = supabase

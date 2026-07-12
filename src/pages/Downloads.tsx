@@ -1,140 +1,426 @@
-import { useEffect, useState } from 'react';
-import { Download as DownloadIcon, FileText, Calendar, BookOpen, FileCheck, Info, Filter } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Download as DownloadIcon, Search, Upload, Trash2, FileText, Loader2, X } from 'lucide-react';
 import { supabase, Download } from '../lib/supabase';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../contexts/AuthContext';
 
-const categories = ['all', 'academic_calendar', 'syllabus', 'application_form', 'result', 'general', 'policy'] as const;
-type Cat = typeof categories[number];
+function formatFileSize(kb: number | null) {
+  if (!kb) return '—';
+  if (kb < 1024) return `${kb} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+}
 
-const catLabel: Record<string, string> = {
-  all: 'All Files',
-  academic_calendar: 'Academic Calendar',
-  syllabus: 'Syllabus',
-  application_form: 'Application Form',
-  result: 'Results',
-  general: 'General',
-  policy: 'Policy',
-};
-
-const catIcon: Record<string, React.ElementType> = {
-  academic_calendar: Calendar,
-  syllabus: BookOpen,
-  application_form: FileCheck,
-  result: FileText,
-  general: Info,
-  policy: FileText,
-};
-
-const catColor: Record<string, string> = {
-  academic_calendar: 'bg-blue-100 text-blue-700',
-  syllabus: 'bg-purple-100 text-purple-700',
-  application_form: 'bg-green-100 text-green-700',
-  result: 'bg-orange-100 text-orange-700',
-  general: 'bg-slate-100 text-slate-700',
-  policy: 'bg-red-100 text-red-700',
-};
+function getFileExt(url: string) {
+  const clean = url.split('?')[0];
+  const ext = clean.split('.').pop()?.toUpperCase();
+  return ext && ext.length <= 5 ? ext : 'FILE';
+}
 
 export default function Downloads() {
-  const [files, setFiles] = useState<Download[]>([]);
-  const [category, setCategory] = useState<Cat>('all');
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+
+  const [downloads, setDownloads] = useState<Download[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState('');
+
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newSemester, setNewSemester] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const fetchDownloads = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('downloads')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+      setDownloads(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load downloads');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setLoading(true);
-    let q = supabase.from('downloads').select('*').eq('is_active', true).order('created_at', { ascending: false });
-    if (category !== 'all') q = q.eq('category', category);
-    q.then(({ data }) => { setFiles(data ?? []); setLoading(false); });
-  }, [category]);
+    fetchDownloads();
+  }, [fetchDownloads]);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    downloads.forEach((d) => { if (d.category) set.add(d.category); });
+    return Array.from(set).sort();
+  }, [downloads]);
+
+  const semesters = useMemo(() => {
+    const set = new Set<string>();
+    downloads.forEach((d) => { if (d.semester) set.add(d.semester); });
+    return Array.from(set).sort();
+  }, [downloads]);
+
+  const filteredDownloads = useMemo(() => {
+    return downloads.filter((d) => {
+      const matchesSearch = !searchQuery || d.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !categoryFilter || d.category === categoryFilter;
+      const matchesSemester = !semesterFilter || d.semester === semesterFilter;
+      return matchesSearch && matchesCategory && matchesSemester;
+    });
+  }, [downloads, searchQuery, categoryFilter, semesterFilter]);
+
+  const resetForm = () => {
+    setNewTitle('');
+    setNewDescription('');
+    setNewCategory('');
+    setNewSemester('');
+    setSelectedFile(null);
+    setUploadError(null);
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      setUploadError('Please select a file.');
+      return;
+    }
+    if (!newTitle.trim()) {
+      setUploadError('Title is required.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase() || 'file';
+      const path = `downloads/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('downloads')
+        .upload(path, selectedFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('downloads').getPublicUrl(path);
+      const fileUrl = urlData.publicUrl;
+
+      const sizeKb = Math.round(selectedFile.size / 1024);
+
+      const { error: insertError } = await supabase.from('downloads').insert({
+        title: newTitle.trim(),
+        description: newDescription.trim() || null,
+        file_url: fileUrl,
+        file_size_kb: sizeKb,
+        category: newCategory.trim() || 'General',
+        semester: newSemester.trim() || null,
+        is_active: true,
+        uploaded_by: profile?.id || null,
+      });
+
+      if (insertError) throw insertError;
+
+      resetForm();
+      setShowUpload(false);
+      await fetchDownloads();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (downloadId: string) => {
+    const item = downloads.find((d) => d.id === downloadId);
+    if (!item) return;
+
+    if (!window.confirm('Are you sure you want to delete this download? This cannot be undone.')) return;
+
+    setDeletingId(downloadId);
+    try {
+      if (item.file_url) {
+        const url = new URL(item.file_url);
+        const path = url.pathname.split('/downloads/')[1];
+        if (path) {
+          await supabase.storage.from('downloads').remove([path]);
+        }
+      }
+
+      const { error: deleteError } = await supabase.from('downloads').delete().eq('id', downloadId);
+      if (deleteError) throw deleteError;
+
+      setDownloads((prev) => prev.filter((d) => d.id !== downloadId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete download');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDownload = (item: Download) => {
+    const link = document.createElement('a');
+    link.href = item.file_url;
+    link.download = item.title || 'download';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (loading) return <LoadingSpinner message="Loading downloads..." />;
 
   return (
-    <div className="page-enter">
-      {/* Hero */}
-      <section className="bg-navy-950 py-8 md:py-14">
-        <div className="page-container text-center">
-          <DownloadIcon className="w-8 h-8 md:w-9 md:h-9 text-gold-400 mx-auto mb-2 md:mb-3" />
-          <h1 className="text-xl md:text-3xl font-serif font-bold text-white mb-1 md:mb-2">Downloads</h1>
-          <p className="text-slate-400 max-w-lg mx-auto text-xs md:text-sm">
-            Academic calendars, syllabi, application forms, and more.
+    <div className="page-container py-8 md:py-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="section-title">Downloads</h1>
+          <p className="section-subtitle">Resources, study materials, and documents</p>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => setShowUpload((v) => !v)}
+            className="btn-primary flex items-center gap-2 self-start"
+          >
+            <Upload className="w-4 h-4" /> Upload File
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+
+      {isAdmin && showUpload && (
+        <div className="card p-6 mb-8">
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-lg font-bold text-navy-950 dark:text-slate-100">Upload New File</h2>
+              <button
+                type="button"
+                onClick={() => { setShowUpload(false); resetForm(); }}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                aria-label="Close upload form"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {uploadError && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 text-sm">
+                {uploadError}
+              </div>
+            )}
+
+            <div>
+              <label className="label" htmlFor="dl-title">Title *</label>
+              <input
+                id="dl-title"
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                required
+                className="input-field"
+                placeholder="File title..."
+              />
+            </div>
+
+            <div>
+              <label className="label" htmlFor="dl-desc">Description</label>
+              <textarea
+                id="dl-desc"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                rows={2}
+                className="input-field"
+                placeholder="Brief description..."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label" htmlFor="dl-category">Category</label>
+                <input
+                  id="dl-category"
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. Syllabus, Assignment"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="dl-semester">Semester</label>
+                <input
+                  id="dl-semester"
+                  type="text"
+                  value={newSemester}
+                  onChange={(e) => setNewSemester(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. 1st Year, Fall 2024"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label">File</label>
+              {selectedFile ? (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-5 h-5 text-navy-500 dark:text-amber-400 flex-shrink-0" />
+                    <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{selectedFile.name}</span>
+                    <span className="text-xs text-slate-400 flex-shrink-0">({formatFileSize(Math.round(selectedFile.size / 1024))})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFile(null)}
+                    className="p-1 rounded text-slate-400 hover:text-red-500 transition-colors"
+                    aria-label="Remove file"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-navy-400 dark:hover:border-amber-400 transition-colors">
+                  <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Click to select a file</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setSelectedFile(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={uploading}
+              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Upload File
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-field pl-10"
+          />
+        </div>
+        {categories.length > 0 && (
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="input-field md:w-48"
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        )}
+        {semesters.length > 0 && (
+          <select
+            value={semesterFilter}
+            onChange={(e) => setSemesterFilter(e.target.value)}
+            className="input-field md:w-48"
+          >
+            <option value="">All Semesters</option>
+            {semesters.map((sem) => (
+              <option key={sem} value={sem}>{sem}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {filteredDownloads.length === 0 ? (
+        <div className="card p-12 text-center">
+          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500 dark:text-slate-400">
+            {downloads.length === 0 ? 'No downloads available yet.' : 'No downloads match your filters.'}
           </p>
         </div>
-      </section>
+      ) : (
+        <div className="space-y-3">
+          {filteredDownloads.map((item) => (
+            <div
+              key={item.id}
+              className="card p-4 md:p-5 flex items-center gap-4 hover:shadow-md transition-shadow"
+            >
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-navy-100 dark:bg-slate-700 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-navy-600 dark:text-amber-400" />
+              </div>
 
-      {/* Filter */}
-      <section className="bg-white border-b border-slate-200 sticky top-[68px] z-30">
-        <div className="page-container">
-          <div className="flex items-center gap-2 py-3 overflow-x-auto">
-            <Filter className="w-4 h-4 text-slate-500 flex-shrink-0 mr-1" />
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-                  category === cat ? 'bg-navy-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {catLabel[cat]}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-medium text-navy-950 dark:text-slate-100 truncate">{item.title}</h3>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-navy-50 text-navy-600 dark:bg-slate-700 dark:text-amber-300">
+                    {getFileExt(item.file_url)}
+                  </span>
+                </div>
+                {item.description && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{item.description}</p>
+                )}
+                <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                  {item.category && <span>{item.category}</span>}
+                  {item.semester && <span>• {item.semester}</span>}
+                  <span>• {formatFileSize(item.file_size_kb)}</span>
+                </div>
+              </div>
 
-      {/* Files */}
-      <section className="py-12 bg-slate-50">
-        <div className="page-container">
-          {loading ? (
-            <div className="flex justify-center py-20">
-              <div className="w-10 h-10 border-4 border-navy-200 border-t-navy-800 rounded-full animate-spin" />
-            </div>
-          ) : files.length === 0 ? (
-            <div className="text-center py-20">
-              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">No files available in this category.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {files.map((file) => {
-                const CatIcon = catIcon[file.category] ?? FileText;
-                return (
-                  <div key={file.id} className="card hover:shadow-md transition-shadow p-5 flex flex-col gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${catColor[file.category]}`}>
-                        <CatIcon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-navy-900 text-sm leading-snug">{file.title}</h3>
-                        {file.semester && <p className="text-xs text-slate-500 mt-0.5">{file.semester}</p>}
-                      </div>
-                    </div>
-
-                    {file.description && (
-                      <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">{file.description}</p>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => handleDownload(item)}
+                  className="btn-primary flex items-center gap-2 !px-4 !py-2 text-sm"
+                  aria-label={`Download ${item.title}`}
+                >
+                  <DownloadIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    disabled={deletingId === item.id}
+                    className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                    aria-label={`Delete ${item.title}`}
+                  >
+                    {deletingId === item.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
                     )}
-
-                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-100">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${catColor[file.category]}`}>
-                        {catLabel[file.category]}
-                      </span>
-                      {file.file_size_kb && (
-                        <span className="text-xs text-slate-400">{(file.file_size_kb / 1024).toFixed(1)} MB</span>
-                      )}
-                    </div>
-
-                    <a
-                      href={file.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-primary w-full justify-center text-sm py-2"
-                    >
-                      <DownloadIcon className="w-3.5 h-3.5" />
-                      Download PDF
-                    </a>
-                  </div>
-                );
-              })}
+                  </button>
+                )}
+              </div>
             </div>
-          )}
+          ))}
         </div>
-      </section>
+      )}
     </div>
   );
 }

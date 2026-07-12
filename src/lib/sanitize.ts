@@ -1,95 +1,101 @@
-/**
- * HTML sanitizer for user-generated content (blog posts, etc.)
- * Strips dangerous tags/attributes while preserving safe formatting.
- * No external dependency — uses DOMParser for robust parsing.
- */
+const ALLOWED_TAGS = [
+  'p', 'br', 'strong', 'em', 'u', 's', 'del', 'ins', 'mark',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'ul', 'ol', 'li',
+  'blockquote', 'q', 'cite',
+  'a', 'span', 'div',
+  'img', 'figure', 'figcaption',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  'pre', 'code',
+  'hr',
+  'sup', 'sub',
+  'abbr',
+];
 
-const ALLOWED_TAGS = new Set([
-  'STRONG', 'EM', 'U', 'S', 'SUB', 'SUP',
-  'B', 'I', 'BR', 'P', 'SPAN',
-  'UL', 'OL', 'LI',
-  'A', 'IMG',
-  'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
-  'DIV', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TD', 'TH',
-]);
-
-const ALLOWED_ATTRS: Record<string, Set<string>> = {
-  A: new Set(['href', 'title']),
-  IMG: new Set(['src', 'alt', 'title']),
-  SPAN: new Set(['style']),
-  P: new Set(['style']),
-  DIV: new Set(['style']),
+const ALLOWED_ATTR: Record<string, string[]> = {
+  a: ['href', 'title', 'target', 'rel'],
+  img: ['src', 'alt', 'width', 'height', 'loading'],
+  span: ['class', 'style'],
+  div: ['class', 'style'],
+  p: ['class', 'style'],
+  td: ['colspan', 'rowspan'],
+  th: ['colspan', 'rowspan'],
+  abbr: ['title'],
+  code: ['class'],
+  pre: ['class'],
 };
 
-const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'data:']);
-const ALLOWED_STYLE_PROPS = new Set(['text-align', 'font-weight', 'font-style', 'text-decoration', 'color', 'background-color']);
+const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:', 'data:'];
 
-function sanitizeStyle(style: string): string {
-  return style
-    .split(';')
-    .map((decl) => {
-      const [prop, ...valParts] = decl.split(':');
-      const trimmedProp = prop.trim().toLowerCase();
-      const val = valParts.join(':').trim();
-      if (!val || !ALLOWED_STYLE_PROPS.has(trimmedProp)) return '';
-      // Block any url() or expression() in style values
-      if (/url\(|expression\(|javascript:/i.test(val)) return '';
-      return `${trimmedProp}: ${val}`;
-    })
-    .filter(Boolean)
-    .join('; ');
-}
+export function sanitizeHtml(html: string): string {
+  if (!html) return '';
 
-export function sanitizeHtml(input: string): string {
-  if (!input) return '';
-  const doc = new DOMParser().parseFromString(input, 'text/html');
-  walkAndClean(doc.body);
-  return doc.body.innerHTML;
-}
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
 
-function walkAndClean(node: HTMLElement): void {
-  const children = Array.from(node.children) as HTMLElement[];
-  for (const child of children) {
-    const tag = child.tagName;
+  function cleanNode(node: Element) {
+    const tag = node.tagName.toLowerCase();
 
-    if (!ALLOWED_TAGS.has(tag)) {
-      // Replace disallowed tag with its text content (preserves inner text)
-      const text = document.createTextNode(child.textContent || '');
-      child.replaceWith(text);
-      continue;
+    if (!ALLOWED_TAGS.includes(tag)) {
+      const parent = node.parentNode;
+      while (node.firstChild) {
+        parent?.insertBefore(node.firstChild, node);
+      }
+      parent?.removeChild(node);
+      return;
     }
 
-    // Clean attributes
-    const allowedAttrs = ALLOWED_ATTRS[tag] || new Set<string>();
-    const attrs = Array.from(child.attributes);
+    const allowedAttrs = ALLOWED_ATTR[tag] ?? [];
+    const attrs = Array.from(node.attributes);
     for (const attr of attrs) {
-      if (!allowedAttrs.has(attr.name.toLowerCase())) {
-        child.removeAttribute(attr.name);
-        continue;
-      }
-      // Validate href/src protocols
-      if (attr.name.toLowerCase() === 'href' || attr.name.toLowerCase() === 'src') {
+      if (!allowedAttrs.includes(attr.name)) {
+        node.removeAttribute(attr.name);
+      } else if (attr.name === 'href') {
         try {
           const url = new URL(attr.value, window.location.origin);
-          if (!ALLOWED_PROTOCOLS.has(url.protocol)) {
-            child.removeAttribute(attr.name);
+          if (!ALLOWED_PROTOCOLS.includes(url.protocol)) {
+            node.removeAttribute(attr.name);
           }
         } catch {
-          child.removeAttribute(attr.name);
+          node.removeAttribute(attr.name);
         }
-      }
-      // Sanitize style attributes
-      if (attr.name.toLowerCase() === 'style') {
-        const cleaned = sanitizeStyle(attr.value);
-        if (cleaned) {
-          child.setAttribute('style', cleaned);
-        } else {
-          child.removeAttribute('style');
+      } else if (attr.name === 'src') {
+        try {
+          const url = new URL(attr.value, window.location.origin);
+          if (!ALLOWED_PROTOCOLS.includes(url.protocol)) {
+            node.removeAttribute(attr.name);
+          }
+        } catch {
+          node.removeAttribute(attr.name);
         }
       }
     }
 
-    // Recurse into children
-    walkAndClean(child);
+    if (tag === 'a') {
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+
+    if (tag === 'img') {
+      if (!node.hasAttribute('loading')) {
+        node.setAttribute('loading', 'lazy');
+      }
+      if (!node.hasAttribute('alt')) {
+        node.setAttribute('alt', '');
+      }
+    }
+
+    const children = Array.from(node.children);
+    for (const child of children) {
+      cleanNode(child);
+    }
   }
+
+  const body = doc.body;
+  const children = Array.from(body.children);
+  for (const child of children) {
+    cleanNode(child);
+  }
+
+  return body.innerHTML;
 }

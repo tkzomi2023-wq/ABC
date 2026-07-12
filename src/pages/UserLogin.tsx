@@ -1,171 +1,123 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useState, FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function UserLogin() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPass, setShowPass] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const emailParam = searchParams.get('email');
-    const autoLogin = searchParams.get('auto_login');
-
-    if (emailParam) setEmail(decodeURIComponent(emailParam));
-
-    // Read password from sessionStorage (set during registration flow) — never from URL
-    const storedPassword = sessionStorage.getItem('pending_password');
-    if (storedPassword) {
-      setPassword(storedPassword);
-      if (autoLogin === 'true' && emailParam) {
-        handleAutoLogin(decodeURIComponent(emailParam), storedPassword);
-      }
-    }
-  }, [searchParams]);
-
-  function getPostLoginDestination() {
-    const redirect = searchParams.get('redirect');
-    if (redirect) return redirect;
-    const openProfile = searchParams.get('open_profile');
-    if (openProfile === 'true') return '/?open_profile=true';
-    return '/';
-  }
-
-  async function handleAutoLogin(emailVal: string, passVal: string) {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: emailVal, password: passVal });
-    sessionStorage.removeItem('pending_password');
-    sessionStorage.removeItem('pending_email');
-    if (error) {
-      setError(error.message || 'Unable to sign in. Please check your credentials.');
-      setLoading(false);
-    } else {
-      sessionStorage.removeItem('pending_password');
-      sessionStorage.removeItem('pending_email');
-      navigate(getPostLoginDestination());
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError(error.message || 'Unable to sign in. Please check your credentials.');
-      setLoading(false);
-    } else {
-      navigate(getPostLoginDestination());
-    }
-  }
 
-  async function handleGoogle() {
-    setError('');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) setError(error.message);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    navigate('/');
   }
 
   return (
-    <div className="min-h-[calc(100vh-120px)] flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-navy-50 dark:bg-navy-950 px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-navy-800 rounded-2xl mb-4 shadow-lg">
-            <BookOpen className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-navy-600 text-gold-400 mb-4">
+            <LogIn className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-navy-900">Welcome Back</h1>
-          <p className="text-slate-500 mt-1 text-sm">Sign in to your ABC portal</p>
+          <h1 className="text-3xl font-serif font-bold text-navy-900 dark:text-navy-50">
+            Welcome Back
+          </h1>
+          <p className="mt-2 text-sm text-navy-600 dark:text-navy-300">
+            Sign in to your Aizawl Bible College account
+          </p>
         </div>
 
-        <div className="card p-6 md:p-8">
+        <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-xl border border-navy-100 dark:border-navy-800 p-6 sm:p-8">
           {error && (
-            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-5 text-red-700 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="label">Email Address</label>
+              <label htmlFor="email" className="block text-sm font-medium text-navy-800 dark:text-navy-200 mb-2">
+                Email Address
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-navy-400" />
                 <input
+                  id="email"
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field pl-10"
                   placeholder="you@example.com"
-                  required
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-800 text-navy-900 dark:text-navy-50 placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition"
                 />
               </div>
             </div>
 
             <div>
-              <label className="label">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-navy-800 dark:text-navy-200 mb-2">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-navy-400" />
                 <input
-                  type={showPass ? 'text' : 'password'}
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field pl-10 pr-10"
-                  placeholder="Your password"
-                  required
+                  placeholder="••••••••"
+                  className="w-full pl-11 pr-11 py-3 rounded-lg border border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-800 text-navy-900 dark:text-navy-50 placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3 text-base">
-              {loading ? 'Signing in...' : 'Sign In'}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-navy-600 hover:bg-navy-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium transition"
+            >
+              {loading ? (
+                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Sign In
+                </>
+              )}
             </button>
           </form>
 
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
-            <div className="relative flex justify-center">
-              <span className="bg-white px-3 text-xs text-slate-500">or continue with</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Sign in with Google
-          </button>
+          <p className="mt-6 text-center text-sm text-navy-600 dark:text-navy-300">
+            Don&apos;t have an account?{' '}
+            <Link to="/register" className="font-medium text-gold-600 hover:text-gold-700 dark:text-gold-400 dark:hover:text-gold-300">
+              Register here
+            </Link>
+          </p>
         </div>
-
-        <p className="text-center text-sm text-slate-600 mt-6">
-          Don't have an account?{' '}
-          <Link
-            to={searchParams.get('redirect') ? `/register?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` : '/register'}
-            className="text-navy-700 font-medium hover:text-navy-900"
-          >
-            Register here
-          </Link>
-        </p>
       </div>
     </div>
   );

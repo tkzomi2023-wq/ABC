@@ -1,621 +1,823 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { CheckCircle, AlertCircle, Camera, Upload, FileText, ExternalLink, X } from 'lucide-react';
+import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  User, GraduationCap,
+  Church, Heart, Users, BookOpen, Languages, FileText, Camera,
+  Trash2, Plus, ChevronRight, ChevronLeft, CheckCircle,
+  AlertCircle, Send, Eye,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
 
-type AcademicRow = { class_name: string; school_college: string; pass_fail: string; year: string };
+type SectionKey =
+  | 'personal' | 'academic' | 'church' | 'spiritual'
+  | 'family' | 'course' | 'languages' | 'statement' | 'review';
 
-type FormState = {
-  course_applied: string;
+const SECTIONS: { key: SectionKey; label: string; icon: typeof User }[] = [
+  { key: 'personal', label: 'Personal', icon: User },
+  { key: 'academic', label: 'Academic', icon: GraduationCap },
+  { key: 'church', label: 'Church', icon: Church },
+  { key: 'spiritual', label: 'Spiritual', icon: Heart },
+  { key: 'family', label: 'Family', icon: Users },
+  { key: 'course', label: 'Course', icon: BookOpen },
+  { key: 'languages', label: 'Languages', icon: Languages },
+  { key: 'statement', label: 'Statement', icon: FileText },
+  { key: 'review', label: 'Review', icon: Eye },
+];
+
+const COURSE_OPTIONS = [
+  'Bachelor of Theology (B.Th)',
+  'Master of Divinity (M.Div)',
+  'Diploma in Theology (Dip.Th)',
+  'Certificate in Biblical Studies',
+];
+
+const APPLYING_FOR_OPTIONS = ['Freshman', 'Transfer', 'Readmission'];
+const GENDER_OPTIONS = ['Male', 'Female'];
+const MARITAL_OPTIONS = ['Single', 'Married', 'Widowed', 'Divorced'];
+
+type FormData = {
   full_name: string;
-  present_address: string;
-  gender: string;
-  dob: string;
-  phone: string;
-  pin_code: string;
   email: string;
-  guardian_name: string;
-  parent_occupation: string;
-  annual_income: string;
-  mother_tongue: string;
-  other_languages: string;
-  marital_status: string;
-  born_again: string;
-  water_baptism_date: string;
+  phone: string;
+  dob: string;
+  gender: string;
+  address: string;
+  pin_code: string;
+  previous_education: string;
+  academic_qualifications: string[];
+  church_name: string;
+  pastor_name: string;
   denomination: string;
   church_involvement: string;
-  statement_of_purpose: string;
+  born_again: string;
+  water_baptism_date: string;
+  practices_vices: boolean;
   calling_aim: string;
-  practices_vices: string;
-  can_pay_fees: string;
+  guardian_name: string;
+  annual_income: string;
+  parent_occupation: string;
+  marital_status: string;
+  course_applied: string;
+  applying_for: string;
   fee_sponsor: string;
+  can_pay_fees: boolean;
+  mother_tongue: string;
+  other_languages: string;
+  statement_of_purpose: string;
 };
 
-const emptyForm: FormState = {
-  course_applied: '', full_name: '', present_address: '', gender: '', dob: '',
-  phone: '', pin_code: '', email: '', guardian_name: '', parent_occupation: '',
-  annual_income: '', mother_tongue: '', other_languages: '', marital_status: '',
-  born_again: '', water_baptism_date: '', denomination: '', church_involvement: '',
-  statement_of_purpose: '', calling_aim: '', practices_vices: '', can_pay_fees: '',
+const EMPTY_FORM: FormData = {
+  full_name: '',
+  email: '',
+  phone: '',
+  dob: '',
+  gender: '',
+  address: '',
+  pin_code: '',
+  previous_education: '',
+  academic_qualifications: [],
+  church_name: '',
+  pastor_name: '',
+  denomination: '',
+  church_involvement: '',
+  born_again: '',
+  water_baptism_date: '',
+  practices_vices: false,
+  calling_aim: '',
+  guardian_name: '',
+  annual_income: '',
+  parent_occupation: '',
+  marital_status: '',
+  course_applied: '',
+  applying_for: '',
   fee_sponsor: '',
+  can_pay_fees: false,
+  mother_tongue: '',
+  other_languages: '',
+  statement_of_purpose: '',
 };
 
-const emptyRow = (): AcademicRow => ({ class_name: '', school_college: '', pass_fail: '', year: '' });
-
-function RadioGroup({ name, value, options, onChange }: {
-  name: string; value: string;
-  options: { label: string; value: string }[];
-  onChange: (val: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2">
-      {options.map(o => (
-        <label key={o.value} className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="radio" name={name} value={o.value} checked={value === o.value}
-            onChange={() => onChange(o.value)}
-            className="w-4 h-4 accent-navy-700"
-          />
-          <span className="text-sm text-slate-700">{o.label}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="label">{label}</label>
-      {children}
-    </div>
-  );
-}
+const inputClass =
+  'w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-800 text-navy-900 dark:text-navy-50 placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition';
+const labelClass = 'block text-sm font-medium text-navy-800 dark:text-navy-200 mb-1.5';
 
 export default function ApplicationForm() {
-  const { user, profile } = useAuth();
-  const [form, setForm] = useState<FormState>({
-    ...emptyForm,
-    email: profile?.email ?? '',
-    full_name: profile?.full_name ?? '',
-  });
-  const [academicRows, setAcademicRows] = useState<AcademicRow[]>([emptyRow(), emptyRow(), emptyRow()]);
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState<FormData>(EMPTY_FORM);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const signatureRef = useRef<HTMLInputElement>(null);
-  const [, setFormDownloadUrl] = useState<string | null>(null);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
 
   useEffect(() => {
-    supabase
-      .from('downloads')
-      .select('file_url, title')
-      .eq('category', 'application_form')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.file_url) setFormDownloadUrl(data.file_url);
-      });
-  }, []);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e1b4b';
+  }, [step]);
 
-  const set = useCallback((key: keyof FormState, val: string) => {
-    setForm(f => ({ ...f, [key]: val }));
-  }, []);
-
-  function onInput(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  function update<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function addQualification() {
+    setForm((f) => ({ ...f, academic_qualifications: [...f.academic_qualifications, ''] }));
+  }
+
+  function updateQualification(index: number, value: string) {
+    setForm((f) => {
+      const next = [...f.academic_qualifications];
+      next[index] = value;
+      return { ...f, academic_qualifications: next };
+    });
+  }
+
+  function removeQualification(index: number) {
+    setForm((f) => ({
+      ...f,
+      academic_qualifications: f.academic_qualifications.filter((_, i) => i !== index),
+    }));
+  }
+
+  function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setPhotoPreview(reader.result as string);
-    reader.readAsDataURL(file);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
   }
 
-  function onSignatureChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setSignaturePreview(reader.result as string);
-    reader.readAsDataURL(file);
+  function getCanvasPos(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
   }
 
-  function updateRow(i: number, key: keyof AcademicRow, val: string) {
-    setAcademicRows(rows => rows.map((r, idx) => idx === i ? { ...r, [key]: val } : r));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  function startDrawing(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
     e.preventDefault();
-    setError('');
+    isDrawingRef.current = true;
+    const pos = getCanvasPos(e);
+    const ctx = canvasRef.current!.getContext('2d')!;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function draw(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
+    if (!isDrawingRef.current) return;
+    e.preventDefault();
+    const pos = getCanvasPos(e);
+    const ctx = canvasRef.current!.getContext('2d')!;
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+
+  function stopDrawing() {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+    const canvas = canvasRef.current;
+    if (canvas) {
+      setSignatureDataUrl(canvas.toDataURL('image/png'));
+    }
+  }
+
+  function clearSignature() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSignatureDataUrl(null);
+  }
+
+  function validateStep(): string | null {
+    if (step === 0) {
+      if (!form.full_name.trim()) return 'Full name is required.';
+      if (!form.email.trim()) return 'Email is required.';
+    }
+    return null;
+  }
+
+  function nextStep() {
+    const err = validateStep();
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    setStep((s) => Math.min(s + 1, SECTIONS.length - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function prevStep() {
+    setError(null);
+    setStep((s) => Math.max(s - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
 
     if (!form.full_name.trim() || !form.email.trim()) {
-      setError('Name and email are required.');
+      setError('Full name and email are required.');
       return;
     }
 
     setLoading(true);
-    const { error: dbErr } = await supabase.from('applications').insert({
-      user_id: user?.id ?? null,
-      // core legacy fields (backwards compat)
+
+    let passportPhotoUrl: string | null = null;
+
+    if (photoFile) {
+      const ext = photoFile.name.split('.').pop() || 'jpg';
+      const path = `applications/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(path, photoFile, { upsert: false });
+
+      if (uploadError) {
+        setError(`Photo upload failed: ${uploadError.message}`);
+        setLoading(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
+      passportPhotoUrl = urlData.publicUrl;
+    }
+
+    const { error: insertError } = await supabase.from('applications').insert({
       full_name: form.full_name,
       email: form.email,
-      phone: form.phone,
+      phone: form.phone || null,
       dob: form.dob || null,
       gender: form.gender || null,
-      address: form.present_address,
-      applying_for: form.course_applied || null,
-      // new fields
-      course_applied: form.course_applied || null,
+      address: form.address || null,
       pin_code: form.pin_code || null,
-      guardian_name: form.guardian_name || null,
-      parent_occupation: form.parent_occupation || null,
-      annual_income: form.annual_income || null,
-      mother_tongue: form.mother_tongue || null,
-      other_languages: form.other_languages || null,
-      marital_status: form.marital_status || null,
-      academic_qualifications: academicRows.filter(r => r.class_name || r.school_college),
-      born_again: form.born_again || null,
-      water_baptism_date: form.water_baptism_date || null,
+      previous_education: form.previous_education || null,
+      academic_qualifications: form.academic_qualifications.filter((q) => q.trim()),
+      church_name: form.church_name || null,
+      pastor_name: form.pastor_name || null,
       denomination: form.denomination || null,
       church_involvement: form.church_involvement || null,
-      statement_of_purpose: form.statement_of_purpose || null,
+      born_again: form.born_again || null,
+      water_baptism_date: form.water_baptism_date || null,
+      practices_vices: form.practices_vices,
       calling_aim: form.calling_aim || null,
-      practices_vices: form.practices_vices === 'yes' ? true : form.practices_vices === 'no' ? false : null,
-      can_pay_fees: form.can_pay_fees === 'yes' ? true : form.can_pay_fees === 'no' ? false : null,
+      guardian_name: form.guardian_name || null,
+      annual_income: form.annual_income || null,
+      parent_occupation: form.parent_occupation || null,
+      marital_status: form.marital_status || null,
+      course_applied: form.course_applied || null,
+      applying_for: form.applying_for || null,
       fee_sponsor: form.fee_sponsor || null,
-      passport_photo_url: photoPreview,
-      signature_data_url: signaturePreview,
+      can_pay_fees: form.can_pay_fees,
+      mother_tongue: form.mother_tongue || null,
+      other_languages: form.other_languages || null,
+      statement: form.statement_of_purpose || null,
+      passport_photo_url: passportPhotoUrl,
+      signature_data_url: signatureDataUrl,
+      status: 'pending',
     });
 
-    if (dbErr) {
-      setError(dbErr.message);
+    if (insertError) {
+      setError(insertError.message);
       setLoading(false);
-    } else {
-      setSuccess(true);
+      return;
     }
+
+    setSuccess(true);
+    setLoading(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   if (success) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center py-20 px-4">
-        <div className="text-center max-w-md">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-5">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+      <div className="min-h-screen flex items-center justify-center bg-navy-50 dark:bg-navy-950 px-4 py-12">
+        <div className="max-w-md text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 mb-6">
+            <CheckCircle className="w-10 h-10" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-navy-900 mb-3">Application Submitted!</h2>
-          <p className="text-slate-600 leading-relaxed">
-            Thank you for applying to Aizawl Bible College. We will review your application and contact you soon at <strong>{form.email}</strong>.
+          <h1 className="text-3xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4">
+            Application Submitted!
+          </h1>
+          <p className="text-navy-600 dark:text-navy-300 mb-8">
+            Thank you for applying to Aizawl Bible College. We will review your application and contact you soon.
           </p>
-          <button onClick={() => { setSuccess(false); setForm({ ...emptyForm, email: profile?.email ?? '', full_name: profile?.full_name ?? '' }); setAcademicRows([emptyRow(), emptyRow(), emptyRow()]); setPhotoPreview(null); setSignaturePreview(null); }} className="btn-primary mt-6">
-            Submit Another Application
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-navy-600 hover:bg-navy-700 text-white font-medium transition"
+          >
+            Return Home
           </button>
         </div>
       </div>
     );
   }
 
+  if (loading) {
+    return <LoadingSpinner message="Submitting your application..." />;
+  }
+
+  const currentSection = SECTIONS[step];
+  const progress = ((step + 1) / SECTIONS.length) * 100;
+
   return (
-    <div className="page-enter">
-
-      {/* Hero */}
-      <section className="bg-navy-950 py-8 md:py-12 lg:py-14">
-        <div className="page-container text-center">
-          <FileText className="w-8 h-8 md:w-9 md:h-9 text-gold-400 mx-auto mb-2 md:mb-3" />
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-serif font-bold text-white mb-1 md:mb-2">Application Form</h1>
-          <p className="text-slate-400 max-w-lg mx-auto text-xs md:text-sm">
-            Apply for admission to Aizawl Bible College. Fill in the form below and submit — it takes just a few minutes.
+    <div className="min-h-screen bg-navy-50 dark:bg-navy-950 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-2">
+            Application Form
+          </h1>
+          <p className="text-navy-600 dark:text-navy-300">
+            Aizawl Bible College Admission Application
           </p>
-          <div className="flex justify-center mt-4">
-            <Link
-              to="/downloads#application"
-              className="inline-flex items-center gap-2 text-gold-300 hover:text-gold-100 text-sm transition-colors border border-gold-500/30 px-5 py-2.5 rounded-lg hover:bg-white/5"
-            >
-              <ExternalLink className="w-4 h-4" />
-              View Application Form in Downloads
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <div className="min-h-screen bg-slate-100 py-10">
-      <div className="max-w-3xl mx-auto px-4">
-
-        {/* Institution Letterhead */}
-        <div className="bg-white border border-slate-200 rounded-t-2xl px-6 pt-7 pb-5 text-center shadow-sm">
-          <h1 className="text-2xl md:text-3xl font-serif font-bold tracking-widest text-navy-900 uppercase">Aizawl Bible College</h1>
-          <p className="text-xs text-slate-500 mt-1">Regd No: MSR 1801 of 29.07.2025</p>
-          <p className="text-xs font-medium text-slate-600 italic">A Theological Institution of Assemblies of God Mizoram District</p>
-          <p className="text-xs text-slate-500 italic">Accredited by Pentecostal Association for Theological Accreditation (PATA)</p>
-          <p className="text-xs text-slate-500 italic">(Member of Evangelical Theological Colleges Association – NEI)</p>
-          <p className="text-xs text-slate-500 mt-1">Post Box – 115, Tuikual North 'D' Mual, Aizawl – 796001, Mizoram, India</p>
-          <p className="text-xs text-slate-500">Phone: 9383007361 / 9862713689 &nbsp;|&nbsp; Email: aizawlbiblecollege24@gmail.com</p>
-
-          <div className="my-5 border-t border-slate-200" />
-
-          <div className="inline-block border-2 border-navy-900 px-8 py-1.5 rounded">
-            <span className="text-base font-bold tracking-widest text-navy-900 uppercase">Application Form</span>
-          </div>
         </div>
 
-        {/* Error banner */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-navy-700 dark:text-navy-200">
+              Step {step + 1} of {SECTIONS.length}: {currentSection.label}
+            </span>
+            <span className="text-sm text-navy-500 dark:text-navy-400">{Math.round(progress)}%</span>
+          </div>
+          <div className="h-2 bg-navy-100 dark:bg-navy-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-navy-600 dark:bg-gold-500 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="hidden sm:flex items-center justify-between mt-4 overflow-x-auto">
+            {SECTIONS.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setStep(i)}
+                  className={`flex flex-col items-center gap-1 px-1 transition ${
+                    i === step
+                      ? 'text-navy-700 dark:text-gold-400'
+                      : i < step
+                      ? 'text-navy-500 dark:text-navy-300'
+                      : 'text-navy-300 dark:text-navy-600'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition ${
+                      i === step
+                        ? 'border-navy-600 dark:border-gold-500 bg-navy-600 dark:bg-gold-500 text-white'
+                        : i < step
+                        ? 'border-navy-400 bg-navy-100 dark:bg-navy-800 text-navy-600 dark:text-navy-300'
+                        : 'border-navy-200 dark:border-navy-700 bg-transparent'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs whitespace-nowrap">{s.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {error && (
-          <div className="flex items-start gap-2 px-5 py-3 bg-red-50 border-x border-red-200 text-red-700 text-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white border-x border-b border-slate-200 rounded-b-2xl shadow-sm px-6 md:px-8 pb-8">
-
-          {/* ── PART A ── */}
-          <div className="pt-7 pb-2 text-center">
-            <h2 className="text-base font-bold underline tracking-widest text-navy-900">PART A</h2>
-            <p className="text-xs italic text-slate-500 mt-1">To be filled in by the applicant only</p>
-          </div>
-
-          {/* Course + Photo row */}
-          <div className="flex items-start justify-between gap-4 mt-4 mb-6">
-            <div>
-              <p className="text-sm font-medium text-slate-700 mb-2">Course Applied for:</p>
-              <RadioGroup
-                name="course_applied" value={form.course_applied}
-                options={[{ label: 'B.Th', value: 'BTh' }, { label: 'Dip.Th', value: 'DipTh' }, { label: 'C.Th', value: 'CTh' }]}
-                onChange={v => set('course_applied', v)}
-              />
-            </div>
-
-            {/* Passport Photo */}
-            <div className="flex flex-col items-center">
-              <div
-                onClick={() => photoRef.current?.click()}
-                className="w-24 h-28 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 overflow-hidden bg-slate-50 transition-colors"
-              >
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Passport" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-center p-1">
-                    <Camera className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-slate-400 leading-tight">Affix passport size photograph</p>
-                  </div>
-                )}
-              </div>
-              <button type="button" onClick={() => photoRef.current?.click()} className="mt-1.5 flex items-center gap-1 text-xs text-navy-600 hover:text-navy-800 font-medium">
-                <Upload className="w-3 h-3" /> Upload
-              </button>
-              <input ref={photoRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* 1. Name */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">1.</span>
-              <Field label="Name of Applicant (in CAPITALS as in Board/Degree Certificate)">
-                <input name="full_name" value={form.full_name} onChange={onInput} required
-                  className="input-field uppercase placeholder:normal-case" placeholder="Full name as on certificate" />
-              </Field>
-            </div>
-
-            {/* 2. Address */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">2.</span>
-              <Field label="Present Address">
-                <textarea name="present_address" value={form.present_address} onChange={onInput} rows={2}
-                  className="input-field resize-none" placeholder="Village/Town, District, State" />
-              </Field>
-            </div>
-
-            {/* 3. Gender + DOB */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">3.</span>
-              <div className="flex-1 flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <p className="label">Gender</p>
-                  <RadioGroup name="gender" value={form.gender}
-                    options={[{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }]}
-                    onChange={v => set('gender', v)} />
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-800 p-6 sm:p-8">
+          {step === 0 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <User className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Personal Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-2">
+                  <label htmlFor="full_name" className={labelClass}>Full Name *</label>
+                  <input id="full_name" type="text" required value={form.full_name} onChange={(e) => update('full_name', e.target.value)} className={inputClass} placeholder="Your full name" />
                 </div>
-                <Field label="Date of Birth">
-                  <input type="date" name="dob" value={form.dob} onChange={onInput} className="input-field" />
-                </Field>
-              </div>
-            </div>
-
-            {/* 4. Mobile + Pin */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">4.</span>
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Mobile">
-                  <input type="tel" name="phone" value={form.phone} onChange={onInput} className="input-field" placeholder="+91 XXXXX XXXXX" />
-                </Field>
-                <Field label="Pin Code">
-                  <input name="pin_code" value={form.pin_code} onChange={onInput} className="input-field" placeholder="796001" />
-                </Field>
-              </div>
-            </div>
-
-            {/* 5. Email */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">5.</span>
-              <Field label="Email Id">
-                <input type="email" name="email" value={form.email} onChange={onInput} required className="input-field" placeholder="you@example.com" />
-              </Field>
-            </div>
-
-            {/* 6. Guardian */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">6.</span>
-              <Field label="Name of the Father / Mother or Guardian">
-                <input name="guardian_name" value={form.guardian_name} onChange={onInput} className="input-field" placeholder="Parent or guardian's full name" />
-              </Field>
-            </div>
-
-            {/* 7. Parent Occupation */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">7.</span>
-              <Field label="Parent's Occupation">
-                <input name="parent_occupation" value={form.parent_occupation} onChange={onInput} className="input-field" placeholder="e.g., Farmer, Government employee" />
-              </Field>
-            </div>
-
-            {/* 8. Annual Income */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">8.</span>
-              <Field label="Annual Income of Parent or Guardian">
-                <input name="annual_income" value={form.annual_income} onChange={onInput} className="input-field" placeholder="e.g., ₹1,20,000 per year" />
-              </Field>
-            </div>
-
-            {/* 9. Mother Tongue + Other languages */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">9.</span>
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Mother Tongue">
-                  <input name="mother_tongue" value={form.mother_tongue} onChange={onInput} className="input-field" placeholder="e.g., Mizo" />
-                </Field>
-                <Field label="Do you speak any other language(s)?">
-                  <input name="other_languages" value={form.other_languages} onChange={onInput} className="input-field" placeholder="e.g., Hindi, English" />
-                </Field>
-              </div>
-            </div>
-
-            {/* 10. Status */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2">10.</span>
-              <div>
-                <p className="label">Status</p>
-                <RadioGroup name="marital_status" value={form.marital_status}
-                  options={[{ label: 'Single', value: 'single' }, { label: 'Married', value: 'married' }]}
-                  onChange={v => set('marital_status', v)} />
-              </div>
-            </div>
-
-            {/* 11. Academic Qualifications */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2">11.</span>
-              <div className="flex-1">
-                <p className="label mb-3">Academic Qualification</p>
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-navy-50">
-                        <th className="text-left px-3 py-2 font-semibold text-navy-800 border-b border-slate-200 w-1/4">Class</th>
-                        <th className="text-left px-3 py-2 font-semibold text-navy-800 border-b border-slate-200">School / College</th>
-                        <th className="text-left px-3 py-2 font-semibold text-navy-800 border-b border-slate-200 w-24">Pass / Fail</th>
-                        <th className="text-left px-3 py-2 font-semibold text-navy-800 border-b border-slate-200 w-20">Year</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {academicRows.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-100 last:border-0">
-                          <td className="px-2 py-1.5">
-                            <input value={row.class_name} onChange={e => updateRow(i, 'class_name', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-navy-400"
-                              placeholder="e.g., HSLC" />
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <input value={row.school_college} onChange={e => updateRow(i, 'school_college', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-navy-400"
-                              placeholder="Institution name" />
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <select value={row.pass_fail} onChange={e => updateRow(i, 'pass_fail', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-navy-400 bg-white">
-                              <option value="">—</option>
-                              <option value="Pass">Pass</option>
-                              <option value="Fail">Fail</option>
-                            </select>
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <input value={row.year} onChange={e => updateRow(i, 'year', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-navy-400"
-                              placeholder="YYYY" maxLength={4} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  <label htmlFor="email" className={labelClass}>Email *</label>
+                  <input id="email" type="email" required value={form.email} onChange={(e) => update('email', e.target.value)} className={inputClass} placeholder="you@example.com" />
                 </div>
-                <button type="button" onClick={() => setAcademicRows(r => [...r, emptyRow()])}
-                  className="mt-2 text-xs text-navy-600 hover:text-navy-800 font-medium underline">
-                  + Add row
-                </button>
+                <div>
+                  <label htmlFor="phone" className={labelClass}>Phone</label>
+                  <input id="phone" type="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} className={inputClass} placeholder="+91 98765 43210" />
+                </div>
+                <div>
+                  <label htmlFor="dob" className={labelClass}>Date of Birth</label>
+                  <input id="dob" type="date" value={form.dob} onChange={(e) => update('dob', e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="gender" className={labelClass}>Gender</label>
+                  <select id="gender" value={form.gender} onChange={(e) => update('gender', e.target.value)} className={inputClass}>
+                    <option value="">Select...</option>
+                    {GENDER_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="address" className={labelClass}>Address</label>
+                  <textarea id="address" rows={2} value={form.address} onChange={(e) => update('address', e.target.value)} className={inputClass} placeholder="Your full address" />
+                </div>
+                <div>
+                  <label htmlFor="pin_code" className={labelClass}>PIN Code</label>
+                  <input id="pin_code" type="text" value={form.pin_code} onChange={(e) => update('pin_code', e.target.value)} className={inputClass} placeholder="796001" />
+                </div>
               </div>
-            </div>
-          </div>
+            </section>
+          )}
 
-          {/* ── PART B ── */}
-          <div className="mt-10 pt-6 border-t border-slate-200 pb-2 text-center">
-            <h2 className="text-base font-bold underline tracking-widest text-navy-900">PART B</h2>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {/* B1 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">1.</span>
-              <Field label="Are you a Born-Again Believer?">
-                <input name="born_again" value={form.born_again} onChange={onInput} className="input-field" placeholder="Yes — explain briefly" />
-              </Field>
-            </div>
-
-            {/* B2 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">2.</span>
-              <Field label="When did you take Water Baptism?">
-                <input name="water_baptism_date" value={form.water_baptism_date} onChange={onInput} className="input-field" placeholder="e.g., March 2018" />
-              </Field>
-            </div>
-
-            {/* B3 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">3.</span>
-              <Field label="What is your denomination?">
-                <input name="denomination" value={form.denomination} onChange={onInput} className="input-field" placeholder="e.g., Assemblies of God" />
-              </Field>
-            </div>
-
-            {/* B4 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">4.</span>
-              <Field label="State your involvement in the Church activities">
-                <textarea name="church_involvement" value={form.church_involvement} onChange={onInput} rows={3}
-                  className="input-field resize-none" placeholder="Describe your roles, ministries, and activities in church..." />
-              </Field>
-            </div>
-
-            {/* B5 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">5.</span>
-              <Field label="Write Statement of purpose to study in this college">
-                <textarea name="statement_of_purpose" value={form.statement_of_purpose} onChange={onInput} rows={3}
-                  className="input-field resize-none" placeholder="Why do you want to study at Aizawl Bible College?" />
-              </Field>
-            </div>
-
-            {/* B6 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2.5">6.</span>
-              <Field label="What is your calling / aim in life?">
-                <input name="calling_aim" value={form.calling_aim} onChange={onInput} className="input-field" placeholder="e.g., Full-time pastor, missionary..." />
-              </Field>
-            </div>
-
-            {/* B7 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2">7.</span>
+          {step === 1 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Academic Background
+              </h2>
               <div>
-                <p className="label">Do you practice smoking, chewing tobacco and Pan, drinking alcohol etc.?</p>
-                <RadioGroup name="practices_vices" value={form.practices_vices}
-                  options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
-                  onChange={v => set('practices_vices', v)} />
+                <label htmlFor="previous_education" className={labelClass}>Previous Education</label>
+                <input id="previous_education" type="text" value={form.previous_education} onChange={(e) => update('previous_education', e.target.value)} className={inputClass} placeholder="e.g. Higher Secondary, BA, etc." />
               </div>
-            </div>
-
-            {/* B8 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2">8.</span>
               <div>
-                <p className="label">Will you be able to pay your fees during study in ABC?</p>
-                <RadioGroup name="can_pay_fees" value={form.can_pay_fees}
-                  options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
-                  onChange={v => set('can_pay_fees', v)} />
-              </div>
-            </div>
-
-            {/* B9 */}
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-medium text-slate-600 w-5 flex-shrink-0 mt-2">9.</span>
-              <div>
-                <p className="label">Who is going to sponsor your fees?</p>
-                <RadioGroup name="fee_sponsor" value={form.fee_sponsor}
-                  options={[
-                    { label: 'Self', value: 'self' },
-                    { label: 'Guardian', value: 'guardian' },
-                    { label: 'Church or Organization', value: 'church' },
-                  ]}
-                  onChange={v => set('fee_sponsor', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* ── DECLARATION ── */}
-          <div className="mt-10 pt-6 border-t border-slate-200">
-            <h2 className="text-sm font-bold tracking-widest text-center text-navy-900 mb-4">DECLARATION OF THE APPLICANT</h2>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-600 leading-relaxed space-y-3">
-              <p>
-                I, <span className="font-medium text-navy-800">{form.full_name || '(applicant\'s name)'}</span>, declare that the information given in this form by me is true and correct. I understand that any information which I have given above, if proved to be false or incorrect, it will automatically disqualify myself for admitted to, or continuing at ABC. I hereby promise by God's help, to faithfully co-operate in observing them and I will endeavour to maintain the high standard of excellence in my conduct and study that will glorify Christ.
-              </p>
-              <p>
-                I promise to fulfill all my financial obligations in paying promptly the required fee for the entire course as per the rules of the college.
-              </p>
-            </div>
-
-            {/* Date + Signature */}
-            <div className="mt-6 flex flex-col sm:flex-row gap-6">
-              <div className="sm:w-44">
-                <label className="label">Date</label>
-                <input type="date" defaultValue={new Date().toISOString().split('T')[0]} readOnly
-                  className="input-field bg-slate-50 cursor-default" />
-              </div>
-
-              <div className="flex-1">
-                <label className="label mb-1.5">Signature of Applicant</label>
-                <div className="flex items-start gap-4">
-                  <div
-                    onClick={() => signatureRef.current?.click()}
-                    className="w-48 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 overflow-hidden bg-slate-50 transition-colors flex-shrink-0"
-                  >
-                    {signaturePreview ? (
-                      <img src={signaturePreview} alt="Signature" className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="text-center p-2">
-                        <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                        <p className="text-[10px] text-slate-400 leading-tight">Upload signature image</p>
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    ref={signatureRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={onSignatureChange}
-                    className="hidden"
-                  />
-                  <div className="flex-1">
-                    {signaturePreview && (
+                <label className={labelClass}>Academic Qualifications</label>
+                <div className="space-y-3">
+                  {form.academic_qualifications.map((q, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={q}
+                        onChange={(e) => updateQualification(i, e.target.value)}
+                        className={inputClass}
+                        placeholder={`Qualification ${i + 1}`}
+                      />
                       <button
                         type="button"
-                        onClick={() => setSignaturePreview(null)}
-                        className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                        onClick={() => removeQualification(i)}
+                        className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center transition"
+                        aria-label="Remove qualification"
                       >
-                        <X className="w-3 h-3" /> Remove
+                        <Trash2 className="w-4 h-4" />
                       </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addQualification}
+                    className="inline-flex items-center gap-2 text-sm text-navy-600 dark:text-gold-400 hover:text-navy-800 dark:hover:text-gold-300 font-medium"
+                  >
+                    <Plus className="w-4 h-4" /> Add Qualification
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 2 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <Church className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Church Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label htmlFor="church_name" className={labelClass}>Church Name</label>
+                  <input id="church_name" type="text" value={form.church_name} onChange={(e) => update('church_name', e.target.value)} className={inputClass} placeholder="Your church name" />
+                </div>
+                <div>
+                  <label htmlFor="pastor_name" className={labelClass}>Pastor's Name</label>
+                  <input id="pastor_name" type="text" value={form.pastor_name} onChange={(e) => update('pastor_name', e.target.value)} className={inputClass} placeholder="Pastor's full name" />
+                </div>
+                <div>
+                  <label htmlFor="denomination" className={labelClass}>Denomination</label>
+                  <input id="denomination" type="text" value={form.denomination} onChange={(e) => update('denomination', e.target.value)} className={inputClass} placeholder="e.g. Assemblies of God" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="church_involvement" className={labelClass}>Church Involvement</label>
+                  <textarea id="church_involvement" rows={3} value={form.church_involvement} onChange={(e) => update('church_involvement', e.target.value)} className={inputClass} placeholder="Describe your involvement in your church" />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 3 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <Heart className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Spiritual Background
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label htmlFor="born_again" className={labelClass}>Born Again Date / Year</label>
+                  <input id="born_again" type="text" value={form.born_again} onChange={(e) => update('born_again', e.target.value)} className={inputClass} placeholder="e.g. 2015 or a specific date" />
+                </div>
+                <div>
+                  <label htmlFor="water_baptism_date" className={labelClass}>Water Baptism Date</label>
+                  <input id="water_baptism_date" type="date" value={form.water_baptism_date} onChange={(e) => update('water_baptism_date', e.target.value)} className={inputClass} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.practices_vices}
+                      onChange={(e) => update('practices_vices', e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-navy-300 dark:border-navy-600 text-navy-600 focus:ring-navy-500"
+                    />
+                    <span className="text-sm text-navy-800 dark:text-navy-200">
+                      I acknowledge that I do not practice any vices (smoking, alcohol, drugs, etc.)
+                    </span>
+                  </label>
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="calling_aim" className={labelClass}>Calling & Aim</label>
+                  <textarea id="calling_aim" rows={3} value={form.calling_aim} onChange={(e) => update('calling_aim', e.target.value)} className={inputClass} placeholder="Describe your calling and aim for ministry" />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 4 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Family Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label htmlFor="guardian_name" className={labelClass}>Guardian / Parent Name</label>
+                  <input id="guardian_name" type="text" value={form.guardian_name} onChange={(e) => update('guardian_name', e.target.value)} className={inputClass} placeholder="Guardian's full name" />
+                </div>
+                <div>
+                  <label htmlFor="annual_income" className={labelClass}>Annual Family Income</label>
+                  <input id="annual_income" type="text" value={form.annual_income} onChange={(e) => update('annual_income', e.target.value)} className={inputClass} placeholder="e.g. 2,00,000 INR" />
+                </div>
+                <div>
+                  <label htmlFor="parent_occupation" className={labelClass}>Parent's Occupation</label>
+                  <input id="parent_occupation" type="text" value={form.parent_occupation} onChange={(e) => update('parent_occupation', e.target.value)} className={inputClass} placeholder="Parent's occupation" />
+                </div>
+                <div>
+                  <label htmlFor="marital_status" className={labelClass}>Marital Status</label>
+                  <select id="marital_status" value={form.marital_status} onChange={(e) => update('marital_status', e.target.value)} className={inputClass}>
+                    <option value="">Select...</option>
+                    {MARITAL_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 5 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Course Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label htmlFor="course_applied" className={labelClass}>Course Applied For</label>
+                  <select id="course_applied" value={form.course_applied} onChange={(e) => update('course_applied', e.target.value)} className={inputClass}>
+                    <option value="">Select a course...</option>
+                    {COURSE_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="applying_for" className={labelClass}>Applying For</label>
+                  <select id="applying_for" value={form.applying_for} onChange={(e) => update('applying_for', e.target.value)} className={inputClass}>
+                    <option value="">Select...</option>
+                    {APPLYING_FOR_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="fee_sponsor" className={labelClass}>Fee Sponsor</label>
+                  <input id="fee_sponsor" type="text" value={form.fee_sponsor} onChange={(e) => update('fee_sponsor', e.target.value)} className={inputClass} placeholder="Who will sponsor your fees?" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.can_pay_fees}
+                      onChange={(e) => update('can_pay_fees', e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-navy-300 dark:border-navy-600 text-navy-600 focus:ring-navy-500"
+                    />
+                    <span className="text-sm text-navy-800 dark:text-navy-200">
+                      I confirm that I / my sponsor can pay the required fees
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 6 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <Languages className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Language Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label htmlFor="mother_tongue" className={labelClass}>Mother Tongue</label>
+                  <input id="mother_tongue" type="text" value={form.mother_tongue} onChange={(e) => update('mother_tongue', e.target.value)} className={inputClass} placeholder="e.g. Mizo, Hindi, English" />
+                </div>
+                <div>
+                  <label htmlFor="other_languages" className={labelClass}>Other Languages</label>
+                  <input id="other_languages" type="text" value={form.other_languages} onChange={(e) => update('other_languages', e.target.value)} className={inputClass} placeholder="e.g. English, Hindi, Bengali" />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 7 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Statement of Purpose
+              </h2>
+              <div>
+                <label htmlFor="statement_of_purpose" className={labelClass}>Statement of Purpose</label>
+                <textarea
+                  id="statement_of_purpose"
+                  rows={8}
+                  value={form.statement_of_purpose}
+                  onChange={(e) => update('statement_of_purpose', e.target.value)}
+                  className={inputClass}
+                  placeholder="Write a brief statement about why you want to study at Aizawl Bible College, your ministry goals, and how this training will help you serve God..."
+                />
+              </div>
+
+              <div className="pt-4 border-t border-navy-100 dark:border-navy-800">
+                <label className={labelClass}>Passport Photo</label>
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  <div className="w-32 h-40 rounded-lg border-2 border-dashed border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Passport preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-8 h-8 text-navy-300" />
                     )}
-                    <p className="text-xs text-slate-400 mt-1">Upload an image of your signature (PNG, JPG). Max 5MB.</p>
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="block w-full text-sm text-navy-600 dark:text-navy-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-navy-600 file:text-white file:font-medium file:cursor-pointer hover:file:bg-navy-700"
+                    />
+                    <p className="mt-2 text-xs text-navy-500 dark:text-navy-400">
+                      Upload a recent passport-size photo (JPG/PNG)
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Submit */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <button type="submit" disabled={loading}
-              className="btn-primary w-full justify-center py-3 text-base font-semibold">
-              {loading ? 'Submitting Application...' : 'Submit Application'}
-            </button>
+              <div className="pt-4 border-t border-navy-100 dark:border-navy-800">
+                <label className={labelClass}>Signature</label>
+                <div className="border-2 border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-800 p-2">
+                  <canvas
+                    ref={canvasRef}
+                    width={400}
+                    height={150}
+                    className="w-full touch-none cursor-crosshair rounded"
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                  />
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={clearSignature}
+                    className="inline-flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+                  >
+                    <Trash2 className="w-4 h-4" /> Clear Signature
+                  </button>
+                  <span className="text-xs text-navy-500 dark:text-navy-400">
+                    {signatureDataUrl ? 'Signature captured' : 'Draw your signature above'}
+                  </span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 8 && (
+            <section className="space-y-5">
+              <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4 flex items-center gap-2">
+                <Eye className="w-5 h-5 text-navy-600 dark:text-gold-400" /> Review Your Application
+              </h2>
+              <div className="space-y-4">
+                <ReviewBlock title="Personal" data={{
+                  'Full Name': form.full_name,
+                  'Email': form.email,
+                  'Phone': form.phone,
+                  'Date of Birth': form.dob,
+                  'Gender': form.gender,
+                  'Address': form.address,
+                  'PIN Code': form.pin_code,
+                }} />
+                <ReviewBlock title="Academic" data={{
+                  'Previous Education': form.previous_education,
+                  'Qualifications': form.academic_qualifications.filter((q) => q.trim()).join(', ') || '—',
+                }} />
+                <ReviewBlock title="Church" data={{
+                  'Church Name': form.church_name,
+                  "Pastor's Name": form.pastor_name,
+                  'Denomination': form.denomination,
+                  'Church Involvement': form.church_involvement,
+                }} />
+                <ReviewBlock title="Spiritual" data={{
+                  'Born Again': form.born_again,
+                  'Water Baptism Date': form.water_baptism_date,
+                  'Practices Vices': form.practices_vices ? 'Yes' : 'No',
+                  'Calling & Aim': form.calling_aim,
+                }} />
+                <ReviewBlock title="Family" data={{
+                  'Guardian Name': form.guardian_name,
+                  'Annual Income': form.annual_income,
+                  "Parent's Occupation": form.parent_occupation,
+                  'Marital Status': form.marital_status,
+                }} />
+                <ReviewBlock title="Course" data={{
+                  'Course Applied': form.course_applied,
+                  'Applying For': form.applying_for,
+                  'Fee Sponsor': form.fee_sponsor,
+                  'Can Pay Fees': form.can_pay_fees ? 'Yes' : 'No',
+                }} />
+                <ReviewBlock title="Languages" data={{
+                  'Mother Tongue': form.mother_tongue,
+                  'Other Languages': form.other_languages,
+                }} />
+                <ReviewBlock title="Statement" data={{
+                  'Statement of Purpose': form.statement_of_purpose || '—',
+                }} />
+                <ReviewBlock title="Uploads" data={{
+                  'Passport Photo': photoPreview ? 'Uploaded' : 'Not uploaded',
+                  'Signature': signatureDataUrl ? 'Captured' : 'Not captured',
+                }} />
+              </div>
+            </section>
+          )}
+
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-navy-100 dark:border-navy-800">
+            {step > 0 ? (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg border border-navy-200 dark:border-navy-700 text-navy-700 dark:text-navy-200 hover:bg-navy-50 dark:hover:bg-navy-800 font-medium transition"
+              >
+                <ChevronLeft className="w-5 h-5" /> Back
+              </button>
+            ) : (
+              <span />
+            )}
+
+            {step < SECTIONS.length - 1 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg bg-navy-600 hover:bg-navy-700 text-white font-medium transition"
+              >
+                Next <ChevronRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 py-2.5 px-6 rounded-lg bg-gold-600 hover:bg-gold-700 text-white font-medium transition"
+              >
+                <Send className="w-5 h-5" /> Submit Application
+              </button>
+            )}
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function ReviewBlock({ title, data }: { title: string; data: Record<string, string> }) {
+  return (
+    <div className="rounded-lg border border-navy-100 dark:border-navy-800 overflow-hidden">
+      <div className="bg-navy-50 dark:bg-navy-800 px-4 py-2">
+        <h3 className="text-sm font-semibold text-navy-800 dark:text-navy-100">{title}</h3>
       </div>
+      <dl className="px-4 py-3 space-y-1.5">
+        {Object.entries(data).map(([key, value]) => (
+          <div key={key} className="flex flex-col sm:flex-row sm:gap-2 text-sm">
+            <dt className="font-medium text-navy-600 dark:text-navy-400 sm:w-40 flex-shrink-0">{key}:</dt>
+            <dd className="text-navy-900 dark:text-navy-100 break-words">{value || '—'}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

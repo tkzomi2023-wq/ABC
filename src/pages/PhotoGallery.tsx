@@ -1,306 +1,423 @@
-import { useEffect, useState } from 'react';
-import { Image, Upload, X, ChevronLeft, ChevronRight, AlertCircle, Loader, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Upload, Trash2, Image as ImageIcon, Loader2, ExternalLink } from 'lucide-react';
 import { supabase, Photo } from '../lib/supabase';
+import ResponsiveImage from '../components/ResponsiveImage';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { compressImage, buildStoragePath } from '../lib/imageCompress';
 
-type UploadForm = { title: string; description: string; album: string; link_url: string; files: File[] };
-
 export default function PhotoGallery() {
   const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [albums, setAlbums] = useState<string[]>([]);
-  const [selectedAlbum, setSelectedAlbum] = useState('All');
-  const [lightbox, setLightbox] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadForm, setUploadForm] = useState<UploadForm>({ title: '', description: '', album: 'General', link_url: '', files: [] });
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-  const [uploadError, setUploadError] = useState('');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newAlbum, setNewAlbum] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const canUpload = profile?.role === 'admin' || profile?.role === 'faculty';
+  const fetchPhotos = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
 
-  useEffect(() => {
-    supabase
-      .from('photos')
-      .select('*')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        const p = data ?? [];
-        setPhotos(p);
-        const unique = ['All', ...Array.from(new Set(p.map((ph) => ph.album ?? 'General')))];
-        setAlbums(unique);
-        setLoading(false);
-      });
+      if (fetchError) throw fetchError;
+      setPhotos(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load photos');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const filtered = selectedAlbum === 'All' ? photos : photos.filter((p) => (p.album ?? 'General') === selectedAlbum);
+  useEffect(() => {
+    fetchPhotos();
+  }, [fetchPhotos]);
 
-  function lightboxNav(dir: 1 | -1) {
-    if (lightbox === null) return;
-    const next = lightbox + dir;
-    if (next >= 0 && next < filtered.length) setLightbox(next);
-  }
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
 
-  async function handleUpload(e: React.FormEvent) {
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i === null ? null : (i + 1) % photos.length));
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i === null ? null : (i - 1 + photos.length) % photos.length));
+    };
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [lightboxIndex, photos.length, closeLightbox]);
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const resetForm = () => {
+    setNewTitle('');
+    setNewDescription('');
+    setNewAlbum('');
+    setNewLinkUrl('');
+    setSelectedFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setUploadError(null);
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (uploadForm.files.length === 0) return;
-    setUploadError('');
+    if (!selectedFile) {
+      setUploadError('Please select an image.');
+      return;
+    }
+
     setUploading(true);
-    setUploadProgress({ current: 0, total: uploadForm.files.length });
+    setUploadError(null);
 
-    const uploadedPhotos: Photo[] = [];
+    try {
+      const compressed = await compressImage(selectedFile);
+      const ext = compressed.name.split('.').pop()?.toLowerCase() || 'webp';
+      const path = buildStoragePath('gallery', newTitle || 'gallery-photo', ext);
 
-    for (let i = 0; i < uploadForm.files.length; i++) {
-      const file = uploadForm.files[i];
-      setUploadProgress({ current: i + 1, total: uploadForm.files.length });
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(path, compressed, { cacheControl: '3600', upsert: false });
 
-      const compressed = await compressImage(file);
-      const ext = compressed.name.split('.').pop();
-      const fileName = buildStoragePath('gallery', uploadForm.title || file.name.replace(/\.[^.]+$/, ''), ext);
-      const { error: uploadErr } = await supabase.storage.from('photos').upload(fileName, compressed, { contentType: compressed.type });
+      if (uploadError) throw uploadError;
 
-      if (uploadErr) {
-        setUploadError(`Failed to upload ${file.name}: ${uploadErr.message}`);
-        continue;
-      }
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
+      const imageUrl = urlData.publicUrl;
 
-      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(fileName);
-      const { error: dbErr } = await supabase.from('photos').insert({
-        title: uploadForm.title || null,
-        description: uploadForm.description || null,
-        album: uploadForm.album,
-        image_url: urlData.publicUrl,
-        uploaded_by: profile?.id,
-        link_url: uploadForm.link_url || null,
+      const { error: insertError } = await supabase.from('photos').insert({
+        title: newTitle.trim() || null,
+        description: newDescription.trim() || null,
+        image_url: imageUrl,
+        album: newAlbum.trim() || 'General',
+        link_url: newLinkUrl.trim() || null,
+        is_published: true,
+        uploaded_by: profile?.id || null,
       });
 
-      if (!dbErr) {
-        uploadedPhotos.push({
-          id: crypto.randomUUID(),
-          title: uploadForm.title || null,
-          description: uploadForm.description || null,
-          album: uploadForm.album,
-          image_url: urlData.publicUrl,
-          uploaded_by: profile?.id ?? null,
-          is_published: true,
-          created_at: new Date().toISOString(),
-          link_url: uploadForm.link_url || null,
-        });
-      }
-    }
+      if (insertError) throw insertError;
 
-    if (uploadedPhotos.length > 0) {
-      setPhotos((prev) => {
-        const updated = [...uploadedPhotos.reverse(), ...prev];
-        const unique = ['All', ...Array.from(new Set(updated.map((ph) => ph.album ?? 'General')))];
-        setAlbums(unique);
-        return updated;
-      });
+      resetForm();
       setShowUpload(false);
-      setUploadForm({ title: '', description: '', album: 'General', link_url: '', files: [] });
+      await fetchPhotos();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload photo');
+    } finally {
+      setUploading(false);
     }
+  };
 
-    setUploading(false);
-    setUploadProgress({ current: 0, total: 0 });
-  }
+  const handleDelete = async (photoId: string) => {
+    const photo = photos.find((p) => p.id === photoId);
+    if (!photo) return;
 
-  function removeFile(index: number) {
-    setUploadForm((f) => ({ ...f, files: f.files.filter((_, i) => i !== index) }));
-  }
+    if (!window.confirm('Are you sure you want to delete this photo? This cannot be undone.')) return;
+
+    setDeletingId(photoId);
+    try {
+      if (photo.image_url) {
+        const url = new URL(photo.image_url);
+        const path = url.pathname.split('/photos/')[1];
+        if (path) {
+          await supabase.storage.from('photos').remove([path]);
+        }
+      }
+
+      const { error: deleteError } = await supabase.from('photos').delete().eq('id', photoId);
+      if (deleteError) throw deleteError;
+
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete photo');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (loading) return <LoadingSpinner message="Loading gallery..." />;
 
   return (
-    <div className="page-enter">
-      {/* Hero */}
-      <section className="bg-navy-950 py-8 md:py-14">
-        <div className="page-container flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
-            <Image className="w-8 h-8 md:w-9 md:h-9 text-gold-400 mx-auto sm:mx-0 mb-2 md:mb-3" />
-            <h1 className="text-xl md:text-3xl font-serif font-bold text-white mb-1">Photo Gallery</h1>
-            <p className="text-slate-400 text-xs md:text-sm">Memories and moments from campus life.</p>
-          </div>
-          {canUpload && (
-            <button onClick={() => setShowUpload(true)} className="btn-gold flex-shrink-0 text-xs md:text-sm">
-              <Upload className="w-3.5 h-3.5 md:w-4 md:h-4" /> Upload Photos
-            </button>
-          )}
+    <div className="page-container py-8 md:py-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="section-title">Photo Gallery</h1>
+          <p className="section-subtitle">Moments and memories from Aizawl Bible College</p>
         </div>
-      </section>
-
-      {/* Album filter */}
-      {albums.length > 1 && (
-        <section className="bg-white border-b border-slate-200 sticky top-[68px] z-30">
-          <div className="page-container">
-            <div className="flex items-center gap-2 py-3 overflow-x-auto">
-              {albums.map((album) => (
-                <button
-                  key={album}
-                  onClick={() => setSelectedAlbum(album)}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-                    selectedAlbum === album ? 'bg-navy-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {album}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Grid */}
-      <section className="py-8 md:py-12 bg-slate-50">
-        <div className="page-container">
-          {loading ? (
-            <div className="flex justify-center py-20">
-              <div className="w-10 h-10 border-4 border-navy-200 border-t-navy-800 rounded-full animate-spin" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-20">
-              <Image className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">No photos in this album yet.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
-              {filtered.map((photo, idx) => (
-                <button
-                  key={photo.id}
-                  onClick={() => setLightbox(idx)}
-                  className="aspect-square overflow-hidden rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all hover:scale-[1.02] group"
-                >
-                  <img
-                    src={photo.image_url}
-                    alt={photo.title ?? ''}
-                    className="w-full h-full object-cover group-hover:brightness-90 transition-all"
-                    loading="lazy"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Lightbox */}
-      {lightbox !== null && filtered[lightbox] && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <button onClick={(e) => { e.stopPropagation(); setLightbox(null); }} className="absolute top-4 right-4 text-white hover:text-slate-300 z-10">
-            <X className="w-7 h-7" />
-          </button>
+        {isAdmin && (
           <button
-            onClick={(e) => { e.stopPropagation(); lightboxNav(-1); }}
-            className={`absolute left-3 md:left-8 text-white hover:text-gold-400 transition-colors ${lightbox === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
-            disabled={lightbox === 0}
+            onClick={() => setShowUpload((v) => !v)}
+            className="btn-primary flex items-center gap-2 self-start"
           >
-            <ChevronLeft className="w-9 h-9" />
+            <Upload className="w-4 h-4" /> Upload Photo
           </button>
-          <div className="max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={filtered[lightbox].image_url}
-              alt={filtered[lightbox].title ?? ''}
-              className="w-full max-h-[80vh] object-contain rounded-xl"
-            />
-            {(filtered[lightbox].title || filtered[lightbox].description) && (
-              <div className="mt-3 text-center">
-                {filtered[lightbox].title && <p className="text-white font-medium">{filtered[lightbox].title}</p>}
-                {filtered[lightbox].description && <p className="text-slate-400 text-sm mt-1">{filtered[lightbox].description}</p>}
-              </div>
-            )}
-            {filtered[lightbox].link_url && (
-              <div className="mt-3 text-center">
-                <a href={filtered[lightbox].link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors">
-                  <ExternalLink className="w-4 h-4" /> View Full Album / Video
-                </a>
-              </div>
-            )}
-            <p className="text-slate-500 text-xs text-center mt-2">{lightbox + 1} / {filtered.length}</p>
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); lightboxNav(1); }}
-            className={`absolute right-3 md:right-8 text-white hover:text-gold-400 transition-colors ${lightbox === filtered.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
-            disabled={lightbox === filtered.length - 1}
-          >
-            <ChevronRight className="w-9 h-9" />
-          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 text-sm">
+          {error}
         </div>
       )}
 
-      {/* Upload modal */}
-      {showUpload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowUpload(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-serif font-bold text-navy-900">Upload Photos</h2>
-              <button onClick={() => setShowUpload(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            {uploadError && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4 text-red-700 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />{uploadError}
-              </div>
-            )}
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div>
-                <label className="label">Select Photos *</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  required
-                  onChange={(e) => setUploadForm((f) => ({ ...f, files: Array.from(e.target.files ?? []) }))}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-navy-800 file:text-white hover:file:bg-navy-700 cursor-pointer"
-                />
-                {uploadForm.files.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs text-slate-500">{uploadForm.files.length} file(s) selected:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {uploadForm.files.map((file, idx) => (
-                        <div key={idx} className="relative group">
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
-                            <img
-                              src={URL.createObjectURL(file)}
-                              alt={file.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(idx)}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="label">Title (applies to all)</label>
-                <input value={uploadForm.title} onChange={(e) => setUploadForm((f) => ({ ...f, title: e.target.value }))} className="input-field" placeholder="Optional title for all photos" />
-              </div>
-              <div>
-                <label className="label">Album</label>
-                <input value={uploadForm.album} onChange={(e) => setUploadForm((f) => ({ ...f, album: e.target.value }))} className="input-field" placeholder="e.g., Graduation 2024" />
-              </div>
-              <div>
-                <label className="label">Link URL (optional)</label>
-                <input type="url" value={uploadForm.link_url} onChange={(e) => setUploadForm((f) => ({ ...f, link_url: e.target.value }))} className="input-field" placeholder="https://facebook.com/... or https://youtube.com/..." />
-                <p className="text-xs text-slate-400 mt-1">Link to Facebook album or YouTube video for more photos/videos</p>
-              </div>
-              <button type="submit" disabled={uploading || uploadForm.files.length === 0} className="btn-primary w-full justify-center">
-                {uploading ? (
-                  <><Loader className="w-4 h-4 animate-spin" /> Uploading {uploadProgress.current}/{uploadProgress.total}...</>
-                ) : (
-                  `Upload ${uploadForm.files.length || ''} Photo${uploadForm.files.length !== 1 ? 's' : ''}`
-                )}
+      {isAdmin && showUpload && (
+        <div className="card p-6 mb-8">
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-lg font-bold text-navy-950 dark:text-slate-100">Upload New Photo</h2>
+              <button
+                type="button"
+                onClick={() => { setShowUpload(false); resetForm(); }}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                aria-label="Close upload form"
+              >
+                <X className="w-5 h-5" />
               </button>
-            </form>
+            </div>
+
+            {uploadError && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 text-sm">
+                {uploadError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label" htmlFor="photo-title">Title</label>
+                <input
+                  id="photo-title"
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="input-field"
+                  placeholder="Photo title..."
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="photo-album">Album</label>
+                <input
+                  id="photo-album"
+                  type="text"
+                  value={newAlbum}
+                  onChange={(e) => setNewAlbum(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. Graduation 2024"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label" htmlFor="photo-desc">Description</label>
+              <textarea
+                id="photo-desc"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                rows={2}
+                className="input-field"
+                placeholder="Brief description..."
+              />
+            </div>
+
+            <div>
+              <label className="label" htmlFor="photo-link">Link URL (optional)</label>
+              <input
+                id="photo-link"
+                type="url"
+                value={newLinkUrl}
+                onChange={(e) => setNewLinkUrl(e.target.value)}
+                className="input-field"
+                placeholder="https://..."
+              />
+            </div>
+
+            <div>
+              <label className="label">Image</label>
+              {previewUrl ? (
+                <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+                  <img src={previewUrl} alt="Preview" className="w-full h-48 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (previewUrl) URL.revokeObjectURL(previewUrl);
+                      setPreviewUrl(null);
+                      setSelectedFile(null);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                    aria-label="Remove selected image"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-navy-400 dark:hover:border-amber-400 transition-colors">
+                  <ImageIcon className="w-8 h-8 text-slate-400 mb-2" />
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Click to select an image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={uploading}
+              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Upload Photo
+            </button>
+          </form>
+        </div>
+      )}
+
+      {photos.length === 0 ? (
+        <div className="card p-12 text-center">
+          <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500 dark:text-slate-400">No photos in the gallery yet.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          {photos.map((photo, index) => (
+            <div
+              key={photo.id}
+              className="group relative rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 cursor-pointer"
+              onClick={() => setLightboxIndex(index)}
+            >
+              <ResponsiveImage
+                src={photo.image_url}
+                alt={photo.title || 'Gallery photo'}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                widths={[300, 600, 900]}
+                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                aspectRatio="1 / 1"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                {photo.title && (
+                  <p className="text-white text-sm font-medium truncate">{photo.title}</p>
+                )}
+                {photo.album && (
+                  <p className="text-white/70 text-xs truncate">{photo.album}</p>
+                )}
+              </div>
+              {photo.link_url && (
+                <a
+                  href={photo.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100"
+                  aria-label="Open external link"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(photo.id);
+                  }}
+                  disabled={deletingId === photo.id}
+                  className="absolute top-2 left-2 p-1.5 rounded-full bg-red-600/80 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                  aria-label="Delete photo"
+                >
+                  {deletingId === photo.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {lightboxIndex !== null && photos[lightboxIndex] && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={closeLightbox}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            onClick={closeLightbox}
+            aria-label="Close lightbox"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          {photos.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((i) => (i === null ? null : (i - 1 + photos.length) % photos.length));
+                }}
+                aria-label="Previous photo"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((i) => (i === null ? null : (i + 1) % photos.length));
+                }}
+                aria-label="Next photo"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </>
+          )}
+          <div
+            className="max-w-5xl max-h-[90vh] flex flex-col items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={photos[lightboxIndex].image_url}
+              alt={photos[lightboxIndex].title || 'Gallery photo'}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+            />
+            {(photos[lightboxIndex].title || photos[lightboxIndex].description) && (
+              <div className="text-center text-white">
+                {photos[lightboxIndex].title && (
+                  <p className="font-medium text-sm">{photos[lightboxIndex].title}</p>
+                )}
+                {photos[lightboxIndex].description && (
+                  <p className="text-sm text-white/70 mt-1">{photos[lightboxIndex].description}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

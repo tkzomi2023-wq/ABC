@@ -1,137 +1,112 @@
-import { FileText } from 'lucide-react';
+import { FileText, Scale } from 'lucide-react';
+
+type LegalSection = {
+  title: string;
+  paragraphs: string[];
+};
+
+const SECTIONS: LegalSection[] = [
+  {
+    title: '1. Acceptance of Terms',
+    paragraphs: [
+      'By accessing and using the Aizawl Bible College website (the "Site"), you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use the Site.',
+      'These terms apply to all visitors, users, and others who access or use the Site, whether you are a registered student, faculty member, or general visitor.',
+    ],
+  },
+  {
+    title: '2. Use of the Site',
+    paragraphs: [
+      'You agree to use the Site only for lawful purposes and in a manner that does not infringe the rights of, restrict, or inhibit anyone else\'s use and enjoyment of the Site.',
+      'Prohibited behavior includes harassing or causing distress or inconvenience to any other user, transmitting obscene or offensive content, or disrupting the normal flow of dialogue within the Site.',
+      'You agree not to attempt to gain unauthorized access to any portion of the Site, any server on which the Site is stored, or any server or computer connected to the Site.',
+    ],
+  },
+  {
+    title: '3. Intellectual Property',
+    paragraphs: [
+      'The content, organization, graphics, design, compilation, and other matters related to the Site, including all software used on the Site, are the property of Aizawl Bible College unless otherwise indicated.',
+      'You may not copy, distribute, republish, download, or transmit any material from the Site without our prior written consent, except where indicated or permitted under applicable law.',
+    ],
+  },
+  {
+    title: '4. User Accounts',
+    paragraphs: [
+      'When you create an account on the Site, you are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account.',
+      'You agree to immediately notify us of any unauthorized use of your account or any other breach of security. We will not be liable for any loss or damage arising from your failure to comply with this obligation.',
+    ],
+  },
+  {
+    title: '5. Applications and Admissions',
+    paragraphs: [
+      'Submission of an application through the Site does not guarantee admission to Aizawl Bible College. All applications are subject to review and approval by the admissions committee.',
+      'You agree to provide accurate, complete, and current information in your application. Any false or misleading information may result in the rejection of your application or dismissal from the college.',
+    ],
+  },
+  {
+    title: '6. Limitation of Liability',
+    paragraphs: [
+      'The Site is provided on an "as is" and "as available" basis without warranties of any kind, whether express or implied. We do not warrant that the Site will be uninterrupted, secure, or error-free.',
+      'To the fullest extent permitted by law, Aizawl Bible College shall not be liable for any direct, indirect, incidental, consequential, or punitive damages arising from your use of or inability to use the Site.',
+    ],
+  },
+  {
+    title: '7. Third-Party Links',
+    paragraphs: [
+      'The Site may contain links to third-party websites or services that are not owned or controlled by Aizawl Bible College. We have no control over and assume no responsibility for the content, privacy policies, or practices of any third-party sites.',
+    ],
+  },
+  {
+    title: '8. Changes to These Terms',
+    paragraphs: [
+      'We reserve the right to revise these Terms and Conditions at any time. Updated terms will be posted on this page with a revised date. Your continued use of the Site after any changes constitutes acceptance of the new terms.',
+    ],
+  },
+  {
+    title: '9. Contact Us',
+    paragraphs: [
+      'If you have any questions about these Terms and Conditions, please contact us at info@aizawlbiblecollege.edu.in or by mail at Aizawl Bible College, Aizawl, Mizoram 796001, India.',
+    ],
+  },
+];
 
 export default function TermsAndConditions() {
   return (
-    <div className="page-enter min-h-screen bg-slate-50 py-12">
-      <div className="page-container max-w-4xl">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-          <div className="bg-navy-950 px-6 py-8 text-center">
-            <FileText className="w-10 h-10 text-gold-400 mx-auto mb-3" />
-            <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">Terms and Conditions</h1>
-            <p className="text-slate-400 text-sm mt-2">Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
+      <section className="bg-navy-800 dark:bg-navy-900 text-white py-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <Scale className="w-12 h-12 text-gold-400 mx-auto mb-4" />
+          <h1 className="text-4xl sm:text-5xl font-serif font-bold mb-4">Terms and Conditions</h1>
+          <p className="text-navy-100 dark:text-navy-300 text-lg">
+            Please read these terms carefully before using our website
+          </p>
+        </div>
+      </section>
+
+      <article className="max-w-3xl mx-auto px-4 py-12">
+        <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-800 p-6 sm:p-10">
+          <div className="flex items-center gap-2 text-sm text-navy-500 dark:text-navy-400 mb-8 pb-6 border-b border-navy-100 dark:border-navy-800">
+            <FileText className="w-4 h-4" />
+            <span>Last updated: January 2025</span>
+          </div>
+
+          <div className="space-y-10">
+            {SECTIONS.map((section) => (
+              <section key={section.title}>
+                <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4">
+                  {section.title}
+                </h2>
+                <div className="space-y-3">
+                  {section.paragraphs.map((para, i) => (
+                    <p key={i} className="text-navy-700 dark:text-navy-200 leading-relaxed text-sm sm:text-base">
+                      {para}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
-
-        {/* Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-          <div className="prose prose-navy max-w-none">
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">1. Acceptance of Terms</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                By accessing and using the Aizawl Bible College (ABC) website and services, you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our website or services.
-              </p>
-              <p className="text-slate-600 leading-relaxed">
-                Aizawl Bible College reserves the right to modify these terms at any time. Changes will be effective immediately upon posting on this website. Your continued use of the website after any modifications indicates your acceptance of the updated terms.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">2. Admission and Enrollment</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Admission to Aizawl Bible College is subject to the following conditions:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>All applicants must complete the official application form and submit required documents</li>
-                <li>Admission decisions are made by the ABC Admissions Committee and are final</li>
-                <li>Students must fulfill all academic and financial requirements before enrollment</li>
-                <li>Provisional admission may be granted pending submission of required documents</li>
-                <li>The college reserves the right to deny admission to any applicant without explanation</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">3. Student Code of Conduct</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                All students of Aizawl Bible College are expected to:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Maintain high standards of Christian character and conduct</li>
-                <li>Attend all classes, chapel services, and college activities as required</li>
-                <li>Abstain from practices inconsistent with Christian values including substance abuse</li>
-                <li>Respect the authority of faculty, staff, and administration</li>
-                <li>Complete all academic requirements and assignments on time</li>
-                <li>Maintain academic integrity and honesty in all coursework</li>
-                <li>Violate any provision may result in disciplinary action, including dismissal</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">4. Academic Policies</h2>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Students must maintain satisfactory academic progress as defined by the college</li>
-                <li>Examinations and assessments are conducted according to the academic calendar</li>
-                <li>Grading follows the standards established by the Pentecostal Association for Theological Accreditation (PATA)</li>
-                <li>Plagiarism and academic dishonesty will result in disciplinary action</li>
-                <li>Course credits are determined by the academic program and cannot be transferred without proper evaluation</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">5. Fees and Payments</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                Financial obligations to the college include:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>All fees must be paid according to the fee schedule provided at admission</li>
-                <li>Late payments may incur additional charges</li>
-                <li>The college reserves the right to withhold transcripts and certificates for unpaid fees</li>
-                <li>Payment methods include cash, bank transfer, and online payment through Razorpay</li>
-                <li>Fee structures are subject to revision by the college administration</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">6. Use of Website</h2>
-              <p className="text-slate-600 leading-relaxed mb-4">
-                When using this website, you agree not to:
-              </p>
-              <ul className="list-disc pl-6 text-slate-600 space-y-2">
-                <li>Attempt unauthorized access to any part of the website or its systems</li>
-                <li>Use the website for any illegal or unauthorized purpose</li>
-                <li>Transmit any harmful code, viruses, or malicious content</li>
-                <li>Collect personal information about other users without consent</li>
-                <li>Interfere with or disrupt the website's operation</li>
-              </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">7. Intellectual Property</h2>
-              <p className="text-slate-600 leading-relaxed">
-                All content on this website, including text, images, logos, and design elements, is the property of Aizawl Bible College and is protected by copyright laws. No part of this website may be reproduced, distributed, or transmitted without prior written permission from the college administration.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">8. Limitation of Liability</h2>
-              <p className="text-slate-600 leading-relaxed">
-                Aizawl Bible College shall not be liable for any direct, indirect, incidental, consequential, or punitive damages arising from your use of this website or services. The college makes no warranties, express or implied, regarding the accuracy or reliability of any content on this website.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">9. Governing Law</h2>
-              <p className="text-slate-600 leading-relaxed">
-                These terms and conditions shall be governed by and construed in accordance with the laws of India. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts in Aizawl, Mizoram.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">10. Contact Information</h2>
-              <p className="text-slate-600 leading-relaxed">
-                For questions or concerns regarding these Terms and Conditions, please contact:
-              </p>
-              <div className="bg-slate-50 rounded-lg p-4 mt-4">
-                <p className="font-medium text-navy-900">Aizawl Bible College</p>
-                <p className="text-slate-600">Post Box – 115, Tuikual North 'D' Mual</p>
-                <p className="text-slate-600">Aizawl – 796001, Mizoram, India</p>
-                <p className="text-slate-600 mt-2">Email: aizawlbiblecollege24@gmail.com</p>
-                <p className="text-slate-600">Phone: 9383007361 / 9862713689</p>
-              </div>
-            </section>
-          </div>
-        </div>
-      </div>
+      </article>
     </div>
   );
 }

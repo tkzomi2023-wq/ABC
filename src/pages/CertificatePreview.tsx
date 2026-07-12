@@ -1,178 +1,315 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, Loader, AlertCircle, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Document, Page, Text, View, StyleSheet, PDFViewer, pdf } from '@react-pdf/renderer';
+import { Download, ArrowLeft, AlertCircle } from 'lucide-react';
 import { supabase, Profile } from '../lib/supabase';
-import { CertificateDocument } from '../components/CertificateDocument';
-import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const pdfStyles = StyleSheet.create({
+  page: {
+    flexDirection: 'column',
+    backgroundColor: '#ffffff',
+    padding: 60,
+    alignItems: 'center',
+    fontFamily: 'Helvetica',
+  },
+  border: {
+    position: 'absolute',
+    top: 20,
+    bottom: 20,
+    left: 20,
+    right: 20,
+    borderWidth: 3,
+    borderColor: '#d97706',
+    borderStyle: 'solid',
+  },
+  innerBorder: {
+    position: 'absolute',
+    top: 28,
+    bottom: 28,
+    left: 28,
+    right: 28,
+    borderWidth: 1,
+    borderColor: '#4338ca',
+    borderStyle: 'solid',
+  },
+  logoPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 50,
+    backgroundColor: '#4338ca',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoText: {
+    fontSize: 28,
+    color: '#fbbf24',
+    fontWeight: 'bold',
+  },
+  collegeName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#312e81',
+    marginBottom: 4,
+  },
+  collegeSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 30,
+  },
+  title: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#d97706',
+    marginBottom: 30,
+    textDecoration: 'underline',
+  },
+  bodyText: {
+    fontSize: 14,
+    color: '#374151',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 1.8,
+  },
+  studentName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#312e81',
+    marginVertical: 16,
+  },
+  courseText: {
+    fontSize: 16,
+    color: '#4b5563',
+    marginBottom: 30,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '70%',
+    marginBottom: 40,
+  },
+  detailItem: {
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 10,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  signatureSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '80%',
+    marginTop: 40,
+  },
+  signatureBlock: {
+    alignItems: 'center',
+  },
+  signatureLine: {
+    width: 200,
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderStyle: 'solid',
+    marginBottom: 4,
+  },
+  signatureLabel: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: 'bold',
+  },
+  signatureSubLabel: {
+    fontSize: 10,
+    color: '#6b7280',
+  },
+});
+
+type CertificateData = {
+  studentName: string;
+  course: string;
+  completionDate: string;
+  certificateId: string;
+};
+
+function CertificateDocument({ data }: { data: CertificateData }) {
+  return (
+    <Document>
+      <Page size="A4" orientation="landscape" style={pdfStyles.page}>
+        <View style={pdfStyles.border} />
+        <View style={pdfStyles.innerBorder} />
+
+        <View style={pdfStyles.logoPlaceholder}>
+          <Text style={pdfStyles.logoText}>ABC</Text>
+        </View>
+
+        <Text style={pdfStyles.collegeName}>Aizawl Bible College</Text>
+        <Text style={pdfStyles.collegeSubtitle}>Aizawl, Mizoram, India</Text>
+
+        <Text style={pdfStyles.title}>Certificate of Completion</Text>
+
+        <Text style={pdfStyles.bodyText}>This is to certify that</Text>
+        <Text style={pdfStyles.studentName}>{data.studentName}</Text>
+        <Text style={pdfStyles.bodyText}>has successfully completed the course of study</Text>
+        <Text style={pdfStyles.courseText}>{data.course}</Text>
+
+        <View style={pdfStyles.detailsRow}>
+          <View style={pdfStyles.detailItem}>
+            <Text style={pdfStyles.detailLabel}>Date of Completion</Text>
+            <Text style={pdfStyles.detailValue}>{data.completionDate}</Text>
+          </View>
+          <View style={pdfStyles.detailItem}>
+            <Text style={pdfStyles.detailLabel}>Certificate ID</Text>
+            <Text style={pdfStyles.detailValue}>{data.certificateId}</Text>
+          </View>
+        </View>
+
+        <View style={pdfStyles.signatureSection}>
+          <View style={pdfStyles.signatureBlock}>
+            <View style={pdfStyles.signatureLine} />
+            <Text style={pdfStyles.signatureLabel}>Principal</Text>
+            <Text style={pdfStyles.signatureSubLabel}>Aizawl Bible College</Text>
+          </View>
+          <View style={pdfStyles.signatureBlock}>
+            <View style={pdfStyles.signatureLine} />
+            <Text style={pdfStyles.signatureLabel}>Academic Office</Text>
+            <Text style={pdfStyles.signatureSubLabel}>Registrar</Text>
+          </View>
+        </View>
+      </Page>
+    </Document>
+  );
+}
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return 'N/A';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function CertificatePreview() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const [user, setUser] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId) {
-      loadUser();
+    if (!userId) {
+      setError('No user ID provided.');
+      setLoading(false);
+      return;
     }
-  }, [userId]);
 
-  async function loadUser() {
-    setLoading(true);
-    setError('');
-    try {
-      const { data, error: fetchError } = await supabase
+    (async () => {
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (fetchError) throw fetchError;
-      if (!data) throw new Error('User not found');
-      if (!data.graduated) throw new Error('This user has not graduated yet');
-
-      setUser(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load user');
-    } finally {
+      if (error) {
+        setError(error.message);
+      } else if (!data) {
+        setError('User profile not found.');
+      } else {
+        setProfile(data as Profile);
+      }
       setLoading(false);
-    }
+    })();
+  }, [userId]);
+
+  async function handleDownload() {
+    if (!profile) return;
+    const data: CertificateData = {
+      studentName: profile.full_name || 'Unknown',
+      course: profile.course || 'Theological Studies',
+      completionDate: formatDate(profile.completion_date),
+      certificateId: profile.certificate_id || `ABC-${profile.id.slice(0, 8)}`,
+    };
+    const blob = await pdf(<CertificateDocument data={data} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `certificate-${profile.full_name?.replace(/\s+/g, '-') || 'student'}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader className="w-8 h-8 text-navy-700 animate-spin" />
-          <p className="text-slate-500 text-sm">Loading certificate...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading certificate..." />;
   }
 
-  if (error || !user) {
+  if (error || !profile) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="card p-8 max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center bg-navy-50 dark:bg-navy-950 px-4">
+        <div className="max-w-md text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-serif font-bold text-navy-900 mb-2">Certificate Not Found</h2>
-          <p className="text-slate-500 mb-6">{error || 'The requested certificate could not be found.'}</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => navigate(-1)} className="btn-secondary">
-              <ArrowLeft className="w-4 h-4" /> Go Back
-            </button>
-            <Link to="/admin?tab=graduated" className="btn-primary">
-              View Graduates
-            </Link>
-          </div>
+          <h1 className="text-2xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-2">
+            Error
+          </h1>
+          <p className="text-navy-600 dark:text-navy-300 mb-6">{error || 'Unable to load certificate.'}</p>
+          <button
+            onClick={() => navigate('/admin')}
+            className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg bg-navy-600 hover:bg-navy-700 text-white font-medium transition"
+          >
+            <ArrowLeft className="w-5 h-5" /> Back to Dashboard
+          </button>
         </div>
       </div>
     );
   }
 
-  const certYear = user.completion_date ? new Date(user.completion_date).getFullYear() : new Date().getFullYear();
-  const certificateId = user.certificate_id || `ABC-${certYear}-${user.id.slice(0, 8).toUpperCase()}`;
+  const certificateData: CertificateData = {
+    studentName: profile.full_name || 'Unknown',
+    course: profile.course || 'Theological Studies',
+    completionDate: formatDate(profile.completion_date),
+    certificateId: profile.certificate_id || `ABC-${profile.id.slice(0, 8)}`,
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Header */}
-      <div className="bg-navy-900 text-white py-4 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-lg font-serif font-bold">Certificate Preview</h1>
-              <p className="text-slate-300 text-sm">{user.full_name}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to={`/admin/users/${user.id}`} className="btn-secondary text-sm">
-              <User className="w-4 h-4" /> View Profile
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Certificate Info Bar */}
-      <div className="bg-white border-b border-slate-200 py-3 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-4 text-sm">
-            <div>
-              <p className="text-slate-500">Certificate ID</p>
-              <p className="font-mono font-semibold text-navy-900">{certificateId}</p>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div>
-              <p className="text-slate-500">Course</p>
-              <p className="font-semibold text-navy-900">{user.course || '—'}</p>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div>
-              <p className="text-slate-500">Completion Date</p>
-              <p className="font-semibold text-navy-900">
-                {user.completion_date ? new Date(user.completion_date).toLocaleDateString('en-IN', {
-                  day: 'numeric', month: 'long', year: 'numeric'
-                }) : '—'}
-              </p>
-            </div>
-            {user.pata_reg_no && (
-              <>
-                <div className="h-8 w-px bg-slate-200" />
-                <div>
-                  <p className="text-slate-500">PATA Reg No</p>
-                  <p className="font-semibold text-navy-900">{user.pata_reg_no}</p>
-                </div>
-              </>
-            )}
-          </div>
-          <PDFDownloadLink
-            document={
-              <CertificateDocument
-                studentName={user.full_name || 'Student'}
-                course={user.course || 'Course'}
-                completionDate={user.completion_date || new Date().toISOString()}
-                certificateId={certificateId}
-                pataRegNo={user.pata_reg_no || undefined}
-              />
-            }
-            fileName={`certificate-${user.full_name?.replace(/\s+/g, '-') || 'student'}.pdf`}
-            className="btn-primary"
-          >
-            {({ loading }) => (
-              loading ? (
-                <><Loader className="w-4 h-4 animate-spin" /> Preparing...</>
-              ) : (
-                <><Download className="w-4 h-4" /> Download PDF</>
-              )
-            )}
-          </PDFDownloadLink>
-        </div>
-      </div>
-
-      {/* PDF Viewer */}
-      <div className="p-4 sm:p-6 flex justify-center">
-        <div className="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-sm text-slate-600 font-medium">Certificate Document</span>
-            <span className="text-xs text-slate-400">PDF Preview</span>
-          </div>
-          <div className="h-[600px]">
-            <PDFViewer
-              showToolbar={false}
-              width="100%"
-              height="100%"
-              className="border-0"
+    <div className="min-h-screen bg-navy-50 dark:bg-navy-950 py-8 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <button
+              onClick={() => navigate('/admin')}
+              className="inline-flex items-center gap-2 text-sm text-navy-600 dark:text-navy-300 hover:text-navy-800 dark:hover:text-navy-100 mb-2"
             >
-              <CertificateDocument
-                studentName={user.full_name || 'Student'}
-                course={user.course || 'Course'}
-                completionDate={user.completion_date || new Date().toISOString()}
-                certificateId={certificateId}
-                pataRegNo={user.pata_reg_no || undefined}
-              />
+              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            </button>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-navy-900 dark:text-navy-50">
+              Certificate Preview
+            </h1>
+            <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
+              {profile.full_name} — {profile.email}
+            </p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg bg-gold-600 hover:bg-gold-700 text-white font-medium transition"
+          >
+            <Download className="w-5 h-5" /> Download PDF
+          </button>
+        </div>
+
+        <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-800 p-2 sm:p-4">
+          <div className="w-full h-[600px] sm:h-[700px]">
+            <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
+              <CertificateDocument data={certificateData} />
             </PDFViewer>
           </div>
         </div>

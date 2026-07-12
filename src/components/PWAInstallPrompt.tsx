@@ -1,125 +1,63 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Download, X, Smartphone } from 'lucide-react';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
-const DISMISS_KEY = 'abc_pwa_install_dismissed';
-const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000;
+import { useState, useEffect } from 'react';
+import { Download, X } from 'lucide-react';
 
 export default function PWAInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const [installed, setInstalled] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (isStandalone) { setInstalled(true); return; }
-
-    const dismissedAt = localStorage.getItem(DISMISS_KEY);
-    if (dismissedAt && Date.now() - parseInt(dismissedAt) < DISMISS_DURATION) return;
-
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setTimeout(() => setVisible(true), 3000);
+      setDeferredPrompt(e);
+      const dismissed = sessionStorage.getItem('pwa-install-dismissed');
+      if (!dismissed) {
+        setShowPrompt(true);
+      }
     };
+
     window.addEventListener('beforeinstallprompt', handler);
-
-    const installedHandler = () => { setInstalled(true); setVisible(false); };
-    window.addEventListener('appinstalled', installedHandler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-      window.removeEventListener('appinstalled', installedHandler);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  const handleClose = useCallback(() => {
-    setClosing(true);
-    setTimeout(() => {
-      setVisible(false);
-      setClosing(false);
-      localStorage.setItem(DISMISS_KEY, Date.now().toString());
-    }, 400);
-  }, []);
+  if (!showPrompt || !deferredPrompt) return null;
 
-  const handleInstall = useCallback(async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const choice = await deferredPrompt.userChoice;
-    if (choice.outcome === 'accepted') setInstalled(true);
+  const handleInstall = async () => {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowPrompt(false);
+    }
     setDeferredPrompt(null);
-    handleClose();
-  }, [deferredPrompt, handleClose]);
+  };
 
-  if (installed || !visible) return null;
+  const handleDismiss = () => {
+    setShowPrompt(false);
+    sessionStorage.setItem('pwa-install-dismissed', '1');
+  };
 
   return (
-    <div
-      className="fixed bottom-4 left-4 z-50"
-      style={{
-        animation: closing
-          ? 'pwaSlideOut 0.4s ease-in forwards'
-          : 'pwaSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-      }}
-    >
-      <div className="relative overflow-hidden bg-white rounded-xl shadow-xl border border-slate-200 w-[158px]">
-        {/* Top accent bar */}
-        <div className="h-0.5 bg-gradient-to-r from-navy-700 via-navy-500 to-gold-400" />
-
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors duration-200 z-10"
-          aria-label="Dismiss"
-        >
-          <X className="w-3 h-3" />
-        </button>
-
-        {/* Content */}
-        <div className="p-3 pt-2.5">
-          {/* Icon + title row */}
-          <div className="flex items-center gap-2 pr-4">
-            <div className="relative flex-shrink-0">
-              <div className="absolute inset-0 bg-navy-100 rounded-lg animate-ping opacity-50" style={{ animationDuration: '2s' }} />
-              <div className="relative w-7 h-7 bg-gradient-to-br from-navy-700 to-navy-900 rounded-lg flex items-center justify-center shadow-sm">
-                <Smartphone className="w-3.5 h-3.5 text-white" />
-              </div>
-            </div>
-            <span className="font-serif text-[11px] font-semibold text-navy-900 leading-tight">
-              Install ABC App
-            </span>
+    <div className="fixed bottom-6 left-6 z-50 max-w-xs animate-in slide-in-from-bottom duration-300">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-navy-900 dark:bg-amber-500 flex items-center justify-center flex-shrink-0">
+            <Download className="w-5 h-5 text-white dark:text-slate-900" />
           </div>
-
-          <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">
-            Add to home screen for quick access.
-          </p>
-
-          {/* CTA button */}
-          <button
-            onClick={handleInstall}
-            className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-gradient-to-r from-navy-700 to-navy-800 text-white rounded-lg font-medium text-[10px] hover:from-navy-800 hover:to-navy-900 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-md group"
-          >
-            <Download className="w-3 h-3 group-hover:translate-y-px transition-transform duration-200" />
-            <span>Add to Home Screen</span>
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100">Install App</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Add Aizawl Bible College to your home screen for quick access.</p>
+            <div className="flex items-center gap-2 mt-3">
+              <button onClick={handleInstall} className="px-3 py-1.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-xs font-medium transition-colors dark:bg-amber-500 dark:hover:bg-amber-600 dark:text-slate-900">
+                Install
+              </button>
+              <button onClick={handleDismiss} className="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-medium transition-colors">
+                Not now
+              </button>
+            </div>
+          </div>
+          <button onClick={handleDismiss} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label="Dismiss">
+            <X className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Shimmer */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-25"
-          style={{
-            background: 'linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%)',
-            backgroundSize: '200% 100%',
-            animation: 'pwaShimmer 3s ease-in-out infinite',
-          }}
-        />
       </div>
     </div>
   );
