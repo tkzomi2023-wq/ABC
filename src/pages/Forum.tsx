@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  MessageSquare, Plus, Pin, PinOff, Lock, Unlock, ArrowLeft,
-  Send, Search, AlertCircle, User as UserIcon, Clock,
-} from 'lucide-react';
+import { MessageSquare, Plus, Pin, PinOff, Lock, Clock as Unlock, ArrowLeft, Send, Search, CircleAlert as AlertCircle, User as UserIcon, Clock } from 'lucide-react';
 import { supabase, ForumPost, ForumReply, Profile } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';

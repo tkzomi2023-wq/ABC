@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Loader2, ExternalLink } from 'lucide-react';
+import { X, Upload, Trash2, Image as ImageIcon, Loader as Loader2, ExternalLink } from 'lucide-react';
 import { supabase, Photo } from '../lib/supabase';
 import ResponsiveImage from '../components/ResponsiveImage';
 import LoadingSpinner from '../components/LoadingSpinner';

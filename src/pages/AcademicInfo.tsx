@@ -1,4 +1,4 @@
-import { GraduationCap, BookOpen, ClipboardCheck, Calendar, Award, Clock, FileText, CheckCircle } from 'lucide-react';
+import { GraduationCap, BookOpen, ClipboardCheck, Calendar, Award, Clock, FileText, CircleCheck as CheckCircle } from 'lucide-react';
 
 type Course = {
   title: string;

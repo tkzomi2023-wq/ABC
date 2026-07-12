@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Mail, User, Tag, MessageSquare, Send, CheckCircle, MapPin, Phone, Clock, Facebook, Youtube } from 'lucide-react';
+import { Mail, User, Tag, MessageSquare, Send, CircleCheck as CheckCircle, MapPin, Phone, Clock, Facebook, Youtube } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function ContactUs() {

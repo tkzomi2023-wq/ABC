@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Search, X, AlertCircle, Calendar, Tag, Clock } from 'lucide-react';
+import { Search, X, CircleAlert as AlertCircle, Calendar, Tag, Clock } from 'lucide-react';
 import { supabase, Notice } from '../lib/supabase';
 import ResponsiveImage from '../components/ResponsiveImage';
 import LoadingSpinner from '../components/LoadingSpinner';

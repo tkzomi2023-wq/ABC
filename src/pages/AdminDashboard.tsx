@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Users, Bell, GraduationCap, UserCog, Download, Image, Settings, Mail,
-  CreditCard, Receipt, Plus, Pencil, Trash2, X, Check, Ban, ShieldCheck,
-  Search, AlertCircle, Eye, Save, Upload, Filter,
-} from 'lucide-react';
+import { Users, Bell, GraduationCap, UserCog, Download, Image, Settings, Mail, CreditCard, Receipt, Plus, Pencil, Trash2, X, Check, Ban, ShieldCheck, Search, CircleAlert as AlertCircle, Eye, Save, Upload, Filter } from 'lucide-react';
 import { supabase, Profile, Notice, Teacher, BoardMember, Download as DownloadType, Photo, ContactMessage, Transaction, SiteSetting, PaymentRequest } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';

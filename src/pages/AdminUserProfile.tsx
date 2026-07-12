@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft, User, Mail, Phone, MapPin, BookOpen, Calendar, Award,
-  GraduationCap, Receipt, FileText, Ban, ShieldCheck, Save, Edit3,
-  X, AlertCircle, Check,
-} from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, MapPin, BookOpen, Calendar, Award, GraduationCap, Receipt, FileText, Ban, ShieldCheck, Save, CreditCard as Edit3, X, CircleAlert as AlertCircle, Check } from 'lucide-react';
 import { supabase, Profile as ProfileType, Transaction, Application } from '../lib/supabase';
 import { getTheme } from '../lib/themes';
 import LoadingSpinner from '../components/LoadingSpinner';

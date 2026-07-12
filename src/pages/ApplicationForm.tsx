@@ -1,11 +1,6 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  User, GraduationCap,
-  Church, Heart, Users, BookOpen, Languages, FileText, Camera,
-  Trash2, Plus, ChevronRight, ChevronLeft, CheckCircle,
-  AlertCircle, Send, Eye,
-} from 'lucide-react';
+import { User, GraduationCap, Church, Heart, Users, BookOpen, Languages, FileText, Camera, Trash2, Plus, ChevronRight, ChevronLeft, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Send, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 

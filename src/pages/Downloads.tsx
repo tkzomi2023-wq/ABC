@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Download as DownloadIcon, Search, Upload, Trash2, FileText, Loader2, X } from 'lucide-react';
+import { Download as DownloadIcon, Search, Upload, Trash2, FileText, Loader as Loader2, X } from 'lucide-react';
 import { supabase, Download } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';

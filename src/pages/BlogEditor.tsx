@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, X, Image as ImageIcon, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { Save, X, Image as ImageIcon, Eye, EyeOff, Loader as Loader2, ArrowLeft } from 'lucide-react';
 import { supabase, BlogPost } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';

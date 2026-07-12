@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, Text, View, StyleSheet, PDFViewer, pdf } from '@react-pdf/renderer';
-import { Download, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Download, ArrowLeft, CircleAlert as AlertCircle } from 'lucide-react';
 import { supabase, Profile } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 

@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  User, Mail, Phone, MapPin, BookOpen, Calendar, Award, Edit3, Save, X,
-  Upload, GraduationCap, Receipt, Palette, Check,
-} from 'lucide-react';
+import { User, Mail, Phone, MapPin, BookOpen, Calendar, Award, CreditCard as Edit3, Save, X, Upload, GraduationCap, Receipt, Palette, Check } from 'lucide-react';
 import { supabase, Transaction } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { compressImage, buildStoragePath } from '../lib/imageCompress';

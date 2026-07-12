@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, LogIn, CircleAlert as AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function UserLogin() {

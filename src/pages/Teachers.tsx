@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { GraduationCap, BookOpen, User, AlertCircle } from 'lucide-react';
+import { GraduationCap, BookOpen, User, CircleAlert as AlertCircle } from 'lucide-react';
 import { supabase, Teacher, BoardMember } from '../lib/supabase';
 import ResponsiveImage from '../components/ResponsiveImage';
 import LoadingSpinner from '../components/LoadingSpinner';

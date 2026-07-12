@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Receipt, CreditCard, Plus, Save, X, AlertCircle,
-  Check, Clock, Filter, Search, Wallet, FileText,
-} from 'lucide-react';
+import { Receipt, CreditCard, Plus, Save, X, CircleAlert as AlertCircle, Check, Clock, Filter, Search, Wallet, FileText } from 'lucide-react';
 import { supabase, Transaction as TransactionType, PaymentRequest, SiteSetting } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';

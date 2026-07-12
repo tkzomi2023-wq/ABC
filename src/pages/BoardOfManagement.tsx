@@ -1,14 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  X,
-  Upload,
-  User,
-  AlertCircle,
-  GripVertical,
-} from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload, User, CircleAlert as AlertCircle, GripVertical } from 'lucide-react';
 import { supabase, BoardMember } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import ResponsiveImage from '../components/ResponsiveImage';
