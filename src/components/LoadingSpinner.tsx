@@ -1,10 +1,10 @@
-import { Loader as Loader2 } from 'lucide-react';
-
-export default function LoadingSpinner({ message = 'Loading...' }: { message?: string }) {
+export default function LoadingSpinner() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <Loader2 className="w-10 h-10 animate-spin text-navy-500" />
-      <p className="text-slate-500 text-sm">{message}</p>
+    <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-navy-200 border-t-navy-800 rounded-full animate-spin" />
+        <p className="text-navy-800 font-medium text-sm">Loading...</p>
+      </div>
     </div>
   );
 }

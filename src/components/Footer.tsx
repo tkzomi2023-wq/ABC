@@ -1,73 +1,166 @@
-import { Facebook, Youtube, Instagram, MessageCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { BookOpen, MapPin, Mail, Facebook, Youtube, Instagram, MessageCircle, Eye } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+let siteViewIncremented = false;
 
 export default function Footer() {
-  const year = new Date().getFullYear();
+  const [siteViews, setSiteViews] = useState<number | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (siteViewIncremented) return;
+      siteViewIncremented = true;
+      const { data } = await supabase.rpc('increment_site_view');
+      if (active && data != null) setSiteViews(data as number);
+    })();
+    return () => { active = false; };
+  }, []);
   return (
-    <footer className="bg-navy-950 text-slate-300 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <img src="/logo.png" alt="Aizawl Bible College" className="w-10 h-10 rounded-full object-cover border-2 border-gold-400" />
+    <footer className="bg-navy-950 text-white">
+      <div className="page-container py-12 md:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+          {/* Brand */}
+          <div className="sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-10 h-10 bg-gold-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <BookOpen className="w-5 h-5 text-white" />
+              </div>
               <div>
-                <h3 className="font-serif font-bold text-white text-lg">Aizawl Bible College</h3>
-                <p className="text-xs text-slate-400">Assemblies of God Mizoram District</p>
+                <p className="font-serif font-bold text-base">Aizawl Bible College</p>
+                <p className="text-gold-400 text-xs">Est. 1998</p>
               </div>
             </div>
-            <p className="text-sm text-slate-400 max-w-md leading-relaxed">
-              A theological institution dedicated to biblical education and ministry training, equipping servants of God for His kingdom work.
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">
+              A theological Institution of Assemblies of God Mizoram District. Equipping servants of God for ministry.
             </p>
-            <div className="flex items-center gap-3 mt-4">
-              <a href="https://www.facebook.com/people/Aizawl-Bible-College/100072019050045/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+            <p className="text-slate-500 text-xs">
+              Accredited by Pentecostal Association for Theological Accreditation (PATA) and Member of Evangelical Theological College Association (NEI) 
+            </p>
+          </div>
+
+          {/* Quick links */}
+          <div>
+            <h4 className="font-semibold text-sm uppercase tracking-wider text-gold-400 mb-4">Quick Links</h4>
+            <ul className="space-y-2.5">
+              {[
+                { label: 'About Us', path: '/about' },
+                { label: 'Our Faculty', path: '/teachers' },
+                { label: 'Notice Board', path: '/notices' },
+                { label: 'Photo Gallery', path: '/gallery' },
+                { label: 'Downloads', path: '/downloads' },
+                { label: 'Apply Now', path: '/apply' },
+              ].map((link) => (
+                <li key={link.path}>
+                  <Link to={link.path} className="text-slate-400 hover:text-gold-400 text-sm transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Academics */}
+          <div>
+            <h4 className="font-semibold text-sm uppercase tracking-wider text-gold-400 mb-4">Academics</h4>
+            <ul className="space-y-2.5">
+              {[
+                { label: 'Prologue', path: '/prologue' },
+                { label: 'Our Doctrine', path: '/doctrine' },
+                { label: 'Academic Info', path: '/academics' },
+                { label: 'Forum', path: '/forum' },
+                { label: 'Contact Us', path: '/contact' },
+              ].map((link) => (
+                <li key={link.path}>
+                  <Link to={link.path} className="text-slate-400 hover:text-gold-400 text-sm transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="font-semibold text-sm uppercase tracking-wider text-gold-400 mb-4">Contact</h4>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-gold-500 flex-shrink-0 mt-0.5" />
+                <span className="text-slate-400 text-sm">
+                  Post Box - 115, Tuikual North 'D' Mual,<br />Aizawl - 796001, Mizoram, India
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Mail className="w-4 h-4 text-gold-500 flex-shrink-0" />
+                <a href="mailto:aizawlbiblecollege24@gmail.com" className="text-slate-400 hover:text-gold-400 text-sm transition-colors">
+                  aizawlbiblecollege24@gmail.com
+                </a>
+              </li>
+            </ul>
+
+            {/* Socials */}
+            <div className="flex items-center gap-3 mt-5">
+              <a
+                href="https://www.facebook.com/people/Aizawl-Bible-College/100072019050045/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-blue-600 flex items-center justify-center transition-colors"
+                aria-label="Facebook"
+              >
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="https://youtube.com/@AizawlBibleCollege" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+              <a
+                href="https://youtube.com/@AizawlBibleCollege"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-red-600 flex items-center justify-center transition-colors"
+                aria-label="YouTube"
+              >
                 <Youtube className="w-4 h-4" />
               </a>
-              <a href="https://instagram.com/@AizawlBibleCollege" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+              <a
+                href="https://instagram.com/@AizawlBibleCollege"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-pink-600 flex items-center justify-center transition-colors"
+                aria-label="Instagram"
+              >
                 <Instagram className="w-4 h-4" />
               </a>
-              <a href="https://wa.me/918973000000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-green-600 flex items-center justify-center transition-colors"
+                aria-label="WhatsApp"
+              >
                 <MessageCircle className="w-4 h-4" />
               </a>
             </div>
           </div>
-
-          <div>
-            <h4 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Quick Links</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/about" className="hover:text-gold-400 transition-colors">About Us</Link></li>
-              <li><Link to="/notices" className="hover:text-gold-400 transition-colors">Notice Board</Link></li>
-              <li><Link to="/blog" className="hover:text-gold-400 transition-colors">Blog</Link></li>
-              <li><Link to="/gallery" className="hover:text-gold-400 transition-colors">Photo Gallery</Link></li>
-              <li><Link to="/teachers" className="hover:text-gold-400 transition-colors">Faculty</Link></li>
-              <li><Link to="/board" className="hover:text-gold-400 transition-colors">Board of Management</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Resources</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/apply" className="hover:text-gold-400 transition-colors">Apply Online</Link></li>
-              <li><Link to="/academics" className="hover:text-gold-400 transition-colors">Academic Info</Link></li>
-              <li><Link to="/prologue" className="hover:text-gold-400 transition-colors">Prologue</Link></li>
-              <li><Link to="/doctrine" className="hover:text-gold-400 transition-colors">Doctrine</Link></li>
-              <li><Link to="/downloads" className="hover:text-gold-400 transition-colors">Downloads</Link></li>
-              <li><Link to="/contact" className="hover:text-gold-400 transition-colors">Contact Us</Link></li>
-            </ul>
-          </div>
         </div>
+      </div>
 
-        <div className="border-t border-white/10 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-500">&copy; {year} Aizawl Bible College. All rights reserved.</p>
-          <div className="flex items-center gap-4 text-xs text-slate-500">
-            <Link to="/terms" className="hover:text-slate-300 transition-colors">Terms</Link>
-            <Link to="/privacy" className="hover:text-slate-300 transition-colors">Privacy</Link>
-            <Link to="/refunds" className="hover:text-slate-300 transition-colors">Refunds</Link>
-            <Link to="/shipping" className="hover:text-slate-300 transition-colors">Shipping</Link>
+      <div className="border-t border-white/10">
+        <div className="page-container py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-slate-500 text-sm">
+            &copy; {new Date().getFullYear()} Aizawl Bible College. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4 text-xs">
+            <Link to="/terms" className="text-slate-500 hover:text-gold-400 transition-colors">Terms</Link>
+            <Link to="/privacy" className="text-slate-500 hover:text-gold-400 transition-colors">Privacy</Link>
+            <Link to="/refunds" className="text-slate-500 hover:text-gold-400 transition-colors">Refunds</Link>
+            <Link to="/shipping" className="text-slate-500 hover:text-gold-400 transition-colors">Shipping</Link>
           </div>
+          <p className="text-slate-600 text-xs">
+            Assemblies of God Mizoram District
+          </p>
+          {siteViews != null && (
+            <p className="text-slate-600 text-xs inline-flex items-center gap-1">
+              <Eye className="w-3.5 h-3.5" />
+              {siteViews.toLocaleString('en-IN')} total views
+            </p>
+          )}
         </div>
       </div>
     </footer>

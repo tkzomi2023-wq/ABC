@@ -1,92 +1,110 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase, Notification } from '../lib/supabase';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
+import { supabase, type Notification } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { subscribeToPush, unsubscribeFromPush, listenForForegroundPush, isNotificationSupported } from '../lib/push';
 
 type NotificationContextType = {
   notifications: Notification[];
   unreadCount: number;
   adminUnreadMessages: number;
-  totalBadge: number;
+  loading: boolean;
+  notifLoading: boolean;
   pushSupported: boolean;
   pushEnabled: boolean;
-  markAllRead: () => Promise<void>;
+  pushError: string | null;
   markAsRead: (id: string) => Promise<void>;
-  enablePush: () => Promise<void>;
-  refreshNotifications: () => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  enablePush: () => Promise<{ success: boolean; error?: string }>;
+  disablePush: () => Promise<{ success: boolean; error?: string }>;
+  refresh: () => void;
 };
 
-const NotificationContext = createContext<NotificationContextType>({
-  notifications: [],
-  unreadCount: 0,
-  adminUnreadMessages: 0,
-  totalBadge: 0,
-  pushSupported: false,
-  pushEnabled: false,
-  markAllRead: async () => {},
-  markAsRead: async () => {},
-  enablePush: async () => {},
-  refreshNotifications: async () => {},
-});
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user, profile } = useAuth();
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [adminUnreadMessages, setAdminUnreadMessages] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
-
-  const fetchNotifications = useCallback(async () => {
-    if (!user) return;
+  const loadNotifications = useCallback(async () => {
+    if (!profile?.id) return;
+    setLoading(true);
     const { data } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', profile.id)
       .order('created_at', { ascending: false })
       .limit(20);
-    if (data) setNotifications(data);
-  }, [user]);
+    const notifs = (data as Notification[]) ?? [];
+    setNotifications(notifs);
+    setUnreadCount(notifs.filter((n) => !n.is_read).length);
 
-  const fetchAdminUnread = useCallback(async () => {
-    if (!user || profile?.role !== 'admin') return;
-    const { count } = await supabase
-      .from('contact_messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_read', false);
-    setAdminUnreadMessages(count ?? 0);
-  }, [user, profile]);
-
-  const refreshNotifications = useCallback(async () => {
-    await fetchNotifications();
-    await fetchAdminUnread();
-  }, [fetchNotifications, fetchAdminUnread]);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchNotifications();
-    fetchAdminUnread();
-
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+    // Admin: load unread contact messages count
+    if (profile.role === 'admin') {
+      const { count } = await supabase
+        .from('contact_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false);
+      setAdminUnreadMessages(count ?? 0);
+    } else {
+      setAdminUnreadMessages(0);
     }
 
-    channelRef.current = supabase
-      .channel(`notifications-${user.id}`)
+    setLoading(false);
+  }, [profile?.id, profile?.role]);
+
+  // Load notifications + set up realtime subscription
+  useEffect(() => {
+    if (!profile?.id) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    loadNotifications();
+
+    // Realtime subscription for new notifications
+    const channel = supabase
+      .channel(`notifications:${profile.id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${profile.id}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev].slice(0, 20));
+          const newNotif = payload.new as Notification;
+          setNotifications((prev) => [newNotif, ...prev].slice(0, 20));
+          setUnreadCount((c) => c + 1);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as Notification;
+          setNotifications((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
+          setUnreadCount((c) =>
+            updated.is_read ? Math.max(0, c - 1) : c
+          );
         }
       )
       .subscribe();
+
+    channelRef.current = channel;
 
     return () => {
       if (channelRef.current) {
@@ -94,60 +112,78 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         channelRef.current = null;
       }
     };
-  }, [user, fetchNotifications, fetchAdminUnread]);
+  }, [profile?.id, loadNotifications]);
 
-  const markAllRead = useCallback(async () => {
-    if (!user) return;
-    await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false);
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-  }, [user]);
+  // Check push support + whether already subscribed
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const supported = await isNotificationSupported();
+      if (!mounted) return;
+      setPushSupported(supported);
+
+      if (supported && profile?.id) {
+        const { data } = await supabase
+          .from('push_subscriptions')
+          .select('id')
+          .eq('user_id', profile.id)
+          .limit(1);
+        if (mounted) setPushEnabled((data?.length ?? 0) > 0);
+      } else {
+        if (mounted) setPushEnabled(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [profile?.id]);
+
+  // Listen for foreground push messages
+  useEffect(() => {
+    listenForForegroundPush(() => {
+      loadNotifications();
+    });
+  }, [loadNotifications]);
 
   const markAsRead = useCallback(async (id: string) => {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    setUnreadCount((c) => Math.max(0, c - 1));
+  }, []);
+
+  const markAllAsRead = useCallback(async () => {
+    if (!profile?.id) return;
     await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('id', id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
-  }, []);
+      .eq('user_id', profile.id)
+      .eq('is_read', false);
+    // Clear from display so new notifications have room to show
+    setNotifications([]);
+    setUnreadCount(0);
+  }, [profile?.id]);
 
-  const enablePush = useCallback(async () => {
-    if (!pushSupported || !user) return;
-
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: undefined,
-      });
-
-      const token = sub.endpoint;
-      await supabase.from('push_subscriptions').upsert(
-        { user_id: user.id, fcm_token: token, device_type: 'web' },
-        { onConflict: 'user_id' }
-      );
+  const enablePush = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!profile?.id) return { success: false, error: 'Not logged in' };
+    setPushError(null);
+    const result = await subscribeToPush(profile.id);
+    if (result.success) {
       setPushEnabled(true);
-    } catch (err) {
-      console.error('Push subscription failed:', err);
+    } else {
+      setPushError(result.error || 'Failed to enable push notifications');
     }
-  }, [pushSupported, user]);
+    return result;
+  }, [profile?.id]);
 
-  useEffect(() => {
-    if (pushSupported && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(async (reg) => {
-        const sub = await reg.pushManager.getSubscription();
-        setPushEnabled(!!sub);
-      }).catch(() => {});
+  const disablePush = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!profile?.id) return { success: false, error: 'Not logged in' };
+    setPushError(null);
+    const result = await unsubscribeFromPush(profile.id);
+    if (result.success) {
+      setPushEnabled(false);
+    } else {
+      setPushError(result.error || 'Failed to disable push notifications');
     }
-  }, [pushSupported]);
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-  const totalBadge = unreadCount + adminUnreadMessages;
+    return result;
+  }, [profile?.id]);
 
   return (
     <NotificationContext.Provider
@@ -155,13 +191,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         notifications,
         unreadCount,
         adminUnreadMessages,
-        totalBadge,
+        loading,
+        notifLoading: loading,
         pushSupported,
         pushEnabled,
-        markAllRead,
+        pushError,
         markAsRead,
+        markAllAsRead,
         enablePush,
-        refreshNotifications,
+        disablePush,
+        refresh: loadNotifications,
       }}
     >
       {children}
@@ -170,5 +209,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 }
 
 export function useNotifications() {
-  return useContext(NotificationContext);
+  const ctx = useContext(NotificationContext);
+  if (!ctx) throw new Error('useNotifications must be used within NotificationProvider');
+  return ctx;
 }

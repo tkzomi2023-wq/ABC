@@ -1,269 +1,210 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Target, Eye, Heart, BookOpen, Users, Award } from 'lucide-react';
-import { supabase, SiteSetting } from '../lib/supabase';
-import ResponsiveImage from '../components/ResponsiveImage';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useEffect, useState, useRef } from 'react';
+import { BookOpen, Target, Eye, Heart, Award, Users, MapPin, Calendar } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
-const DEFAULT_HERO_IMAGE = 'https://images.pexels.com/photos/289737/pexels-photo-289737.jpeg?auto=compress&cs=tinysrgb&w=1600';
-const DEFAULT_IMAGES = [
-  'https://images.pexels.com/photos/256531/pexels-photo-256531.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/301926/pexels-photo-301926.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/159740/books-bookstore-book-reading-159740.jpeg?auto=compress&cs=tinysrgb&w=600',
-];
-
-const SETTING_KEYS = ['about_hero_image', 'about_image_1', 'about_image_2', 'about_image_3', 'about_image_4'];
-
-type ValuesItem = {
-  icon: typeof BookOpen;
-  title: string;
-  description: string;
-};
-
-const VALUES: ValuesItem[] = [
-  {
-    icon: BookOpen,
-    title: 'Biblical Authority',
-    description: 'We uphold the Bible as the inspired, infallible, and authoritative Word of God, the foundation of all our teaching and practice.',
-  },
-  {
-    icon: Heart,
-    title: 'Christ-Centered',
-    description: 'We are committed to knowing Christ and making Him known, nurturing a personal relationship with our Lord and Savior.',
-  },
-  {
-    icon: Users,
-    title: 'Community Life',
-    description: 'We foster a loving community where students grow together in faith, fellowship, and mutual support.',
-  },
-  {
-    icon: Award,
-    title: 'Academic Excellence',
-    description: 'We pursue rigorous theological education, equipping students with knowledge and skills for effective ministry.',
-  },
-];
-
-export default function AboutUs() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
-  const [images, setImages] = useState<string[]>(DEFAULT_IMAGES);
-
-  const fetchSettings = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('*')
-      .in('setting_key', SETTING_KEYS);
-
-    if (error) throw error;
-
-    const settings = (data || []) as SiteSetting[];
-    const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
-
-    if (settingsMap.get('about_hero_image')) setHeroImage(settingsMap.get('about_hero_image')!);
-
-    const newImages = [...DEFAULT_IMAGES];
-    for (let i = 0; i < 4; i++) {
-      const key = `about_image_${i + 1}`;
-      if (settingsMap.get(key)) newImages[i] = settingsMap.get(key)!;
-    }
-    setImages(newImages);
-  }, []);
+function AnimatedCounter({ value, label, icon: Icon }: { value: number; label: string; icon: React.ElementType }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const started = useRef(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        await fetchSettings();
-      } catch (err) {
-        console.error('Error fetching about page data:', err);
-        setError('Failed to load page content. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [fetchSettings]);
-
-  if (loading) return <LoadingSpinner message="Loading about page..." />;
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
-        <p className="text-red-500 dark:text-red-400 text-center">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded-lg bg-navy-700 text-white text-sm font-medium hover:bg-navy-600 transition-colors"
-        >
-          Retry
-        </button>
-      </div>
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const start = Date.now();
+          const duration = 1800;
+          const tick = () => {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(eased * value));
+            if (progress < 1) requestAnimationFrame(tick);
+            else setCount(value);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.3 }
     );
-  }
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [value]);
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="relative h-[50vh] min-h-[350px] w-full overflow-hidden">
-        <div className="absolute inset-0">
-          <ResponsiveImage
-            src={heroImage}
-            alt="Aizawl Bible College"
-            className="w-full h-full object-cover"
-            loading="eager"
-            widths={[800, 1200, 1600, 1920]}
-            sizes="100vw"
-            fallbackSrc={DEFAULT_HERO_IMAGE}
-          />
-        </div>
-        <div className="absolute inset-0 bg-navy-950/60" />
-        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center items-center text-center">
-          <h1 className="font-serif text-4xl sm:text-5xl font-bold text-white mb-4 drop-shadow-lg">
-            About Us
-          </h1>
-          <p className="text-lg text-slate-200 max-w-2xl drop-shadow-md">
-            Dedicated to biblical education and ministry training under the Assemblies of God Mizoram District.
+    <div ref={ref} className="card p-6 text-center hover:shadow-md transition-shadow">
+      <div className="inline-flex items-center justify-center w-12 h-12 bg-navy-100 rounded-xl mb-3">
+        <Icon className="w-6 h-6 text-navy-700" />
+      </div>
+      <p className="text-4xl font-serif font-bold text-navy-900">{count}+</p>
+      <p className="text-slate-600 text-sm mt-1">{label}</p>
+    </div>
+  );
+}
+
+export default function AboutUs() {
+  const [stats, setStats] = useState({ first: 0, second: 0, final: 0 });
+  const [siteImages, setSiteImages] = useState<Record<string, string>>({});
+
+  // Default fallback images
+  const defaultImages = {
+    about_hero_image: 'https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    about_image_1: 'https://images.pexels.com/photos/256490/pexels-photo-256490.jpeg?auto=compress&cs=tinysrgb&w=600',
+    about_image_2: 'https://images.pexels.com/photos/1708936/pexels-photo-1708936.jpeg?auto=compress&cs=tinysrgb&w=600',
+    about_image_3: 'https://images.pexels.com/photos/301926/pexels-photo-301926.jpeg?auto=compress&cs=tinysrgb&w=600',
+    about_image_4: 'https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg?auto=compress&cs=tinysrgb&w=600',
+  };
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('student_year')
+      .eq('role', 'student')
+      .then(({ data }) => {
+        if (!data) return;
+        setStats({
+          first: data.filter((p) => p.student_year === '1st_year').length,
+          second: data.filter((p) => p.student_year === '2nd_year').length,
+          final: data.filter((p) => p.student_year === 'final_year').length,
+        });
+      });
+
+    supabase
+      .from('site_settings')
+      .select('*')
+      .like('setting_key', 'about_%')
+      .then(({ data }) => {
+        if (data) {
+          const imgMap: Record<string, string> = {};
+          data.forEach((s) => {
+            imgMap[s.setting_key] = s.setting_value;
+          });
+          setSiteImages(imgMap);
+        }
+      });
+  }, []);
+
+  return (
+    <div className="page-enter">
+      {/* Hero */}
+      <section className="bg-navy-950 py-8 md:py-14">
+        <div className="page-container text-center">
+          <BookOpen className="w-8 h-8 md:w-9 md:h-9 text-gold-400 mx-auto mb-2 md:mb-3" />
+          <h1 className="text-xl md:text-3xl font-serif font-bold text-white mb-1 md:mb-2">About Aizawl Bible College</h1>
+          <p className="text-slate-400 max-w-xl mx-auto text-xs md:text-sm">
+            A premier theological institution of the Assemblies of God, Mizoram District, committed to excellence in biblical education since 1998.
           </p>
         </div>
       </section>
 
-      {/* Mission Section */}
-      <section className="py-16 bg-white dark:bg-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      {/* History */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="page-container">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-navy-100 dark:bg-navy-900 flex items-center justify-center">
-                  <Target className="w-6 h-6 text-navy-700 dark:text-gold-400" />
-                </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-navy-900 dark:text-white">
-                  Our Mission
-                </h2>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                The mission of Aizawl Bible College is to equip men and women for effective Christian ministry
-                through biblically grounded education, practical training, and spiritual formation. We strive to
-                develop servant-leaders who are deeply rooted in Scripture, empowered by the Holy Spirit, and
-                committed to the Great Commission.
+              <span className="text-sm font-semibold text-gold-600 uppercase tracking-wide">Our Story</span>
+              <h2 className="section-title mt-2 mb-5">A Legacy of Faith & Learning</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                Founded in 1998 by the Assemblies of God Mizoram District, Aizawl Bible College was established with a
+                singular vision: to equip young men and women with sound theological education for effective ministry
+                in Northeast India and beyond.
               </p>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed mt-4">
-                We seek to prepare students not only for pastoral ministry but for all forms of Christian service,
-                nurturing a heart for missions, evangelism, and church planting.
+              <p className="text-slate-600 leading-relaxed mb-4">
+                Over more than two decades, our college has grown into a respected institution known for its rigorous
+                academic programs, vibrant spiritual life, and graduates who serve faithfully across Mizoram,
+                Northeast India, and international mission fields.
+              </p>
+              <p className="text-slate-600 leading-relaxed">
+                As an accredited institution by the Pentecostal Association for Theological Accreditation (PATA) and a member of the Evangelical Theological College Association (NEI), ABC maintains high standards of
+                theological education while remaining deeply committed to Pentecostal faith and practice.
               </p>
             </div>
-            <div className="rounded-2xl overflow-hidden shadow-xl">
-              <ResponsiveImage
-                src={images[0]}
+            <div className="grid grid-cols-2 gap-4">
+              <img
+                src={siteImages.about_image_1 || defaultImages.about_image_1}
                 alt="College campus"
-                className="w-full object-cover"
-                widths={[400, 600, 800]}
-                sizes="(max-width: 768px) 100vw, 50vw"
-                aspectRatio="4/3"
-                fallbackSrc={DEFAULT_IMAGES[0]}
+                className="rounded-xl h-48 w-full object-cover"
+              />
+              <img
+                src={siteImages.about_image_2 || defaultImages.about_image_2}
+                alt="Students studying"
+                className="rounded-xl h-48 w-full object-cover mt-8"
+              />
+              <img
+                src={siteImages.about_image_3 || defaultImages.about_image_3}
+                alt="Chapel"
+                className="rounded-xl h-48 w-full object-cover -mt-4"
+              />
+              <img
+                src={siteImages.about_image_4 || defaultImages.about_image_4}
+                alt="Library"
+                className="rounded-xl h-48 w-full object-cover mt-4"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Vision Section */}
-      <section className="py-16 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1 rounded-2xl overflow-hidden shadow-xl">
-              <ResponsiveImage
-                src={images[1]}
-                alt="College community"
-                className="w-full object-cover"
-                widths={[400, 600, 800]}
-                sizes="(max-width: 768px) 100vw, 50vw"
-                aspectRatio="4/3"
-                fallbackSrc={DEFAULT_IMAGES[1]}
-              />
-            </div>
-            <div className="order-1 md:order-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-navy-100 dark:bg-navy-900 flex items-center justify-center">
-                  <Eye className="w-6 h-6 text-navy-700 dark:text-gold-400" />
-                </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-navy-900 dark:text-white">
-                  Our Vision
-                </h2>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                Our vision is to be a leading theological institution in Mizoram and beyond, recognized for
-                academic excellence, spiritual vitality, and faithful service to the church. We envision
-                graduates who are transformed by the gospel and equipped to transform their communities for Christ.
-              </p>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed mt-4">
-                We aim to be a center where the church's future leaders are shaped — men and women of integrity,
-                deep faith, and practical wisdom, ready to serve God's people with compassion and courage.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Values Section */}
-      <section className="py-16 bg-white dark:bg-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Values */}
+      <section className="py-16 md:py-20 bg-slate-50">
+        <div className="page-container">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-navy-100 dark:bg-navy-900 flex items-center justify-center">
-                <Heart className="w-6 h-6 text-navy-700 dark:text-gold-400" />
-              </div>
-            </div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-navy-900 dark:text-white mb-4">
-              Our Core Values
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-              The principles that guide our community and shape every aspect of college life.
-            </p>
+            <h2 className="section-title">Our Core Values</h2>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {VALUES.map((value) => {
-              const Icon = value.icon;
-              return (
-                <div
-                  key={value.title}
-                  className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-6 text-center hover:shadow-md transition-shadow"
-                >
-                  <div className="w-14 h-14 rounded-full bg-navy-700 dark:bg-navy-800 flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-7 h-7 text-gold-400" />
-                  </div>
-                  <h3 className="font-serif text-lg font-bold text-navy-900 dark:text-white mb-3">
-                    {value.title}
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {value.description}
-                  </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { icon: BookOpen, title: 'Biblical Authority', desc: 'The Holy Scriptures are the inspired Word of God and our supreme guide for faith and practice.' },
+              { icon: Target, title: 'Academic Excellence', desc: 'We pursue rigorous scholarship and theological inquiry to equip students for thoughtful ministry.' },
+              { icon: Heart, title: 'Spiritual Formation', desc: 'We cultivate a life of prayer, worship, and deep personal relationship with Jesus Christ.' },
+              { icon: Users, title: 'Community', desc: 'We foster a family atmosphere of mutual love, accountability, and encouragement.' },
+              { icon: Eye, title: 'Mission Focus', desc: 'Every graduate is prepared and motivated to participate in the Great Commission.' },
+              { icon: Award, title: 'Integrity', desc: 'We model the highest ethical standards in all areas of college life and ministry.' },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="card p-6 hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 bg-gold-100 rounded-xl flex items-center justify-center mb-4">
+                  <Icon className="w-5 h-5 text-gold-600" />
                 </div>
-              );
-            })}
+                <h3 className="font-serif font-bold text-navy-900 text-lg mb-2">{title}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Image Grid */}
-      <section className="py-16 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-navy-900 dark:text-white text-center mb-12">
-            Life at Aizawl Bible College
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {images.map((img, idx) => (
-              <div
-                key={idx}
-                className="rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
-              >
-                <ResponsiveImage
-                  src={img}
-                  alt={`College life ${idx + 1}`}
-                  className="w-full object-cover"
-                  widths={[200, 400, 600]}
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-                  aspectRatio="1/1"
-                  fallbackSrc={DEFAULT_IMAGES[idx]}
-                />
+      {/* Live student stats */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="page-container">
+          <div className="text-center mb-10">
+            <h2 className="section-title">Student Enrollment</h2>
+            <p className="text-slate-500 mt-2">Live statistics from our registered student community</p>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <AnimatedCounter value={stats.first} label="1st Year Students" icon={Users} />
+            <AnimatedCounter value={stats.second} label="2nd Year Students" icon={Users} />
+            <AnimatedCounter value={stats.final} label="Final Year Students" icon={Users} />
+            <AnimatedCounter value={stats.first + stats.second + stats.final} label="Total Enrolled" icon={Award} />
+          </div>
+        </div>
+      </section>
+
+      {/* Info blocks */}
+      <section className="py-16 bg-navy-950">
+        <div className="page-container">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: MapPin, label: 'Address', value: "Post Box - 115, Tuikual North 'D' Mual, Aizawl - 796001, Mizoram, India" },
+              { icon: Calendar, label: 'Established', value: '1998 — Over 25 years of ministry training' },
+              { icon: Award, label: 'Affiliation', value: 'Pentecostal Association for Theological Accreditation (PATA)' },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-start gap-4 p-5 bg-white/5 rounded-xl">
+                <div className="w-10 h-10 bg-gold-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-5 h-5 text-gold-400" />
+                </div>
+                <div>
+                  <p className="text-gold-400 text-xs font-semibold uppercase tracking-wide mb-1">{label}</p>
+                  <p className="text-slate-300 text-sm leading-relaxed">{value}</p>
+                </div>
               </div>
             ))}
           </div>

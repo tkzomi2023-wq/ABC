@@ -1,277 +1,208 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Tag, Calendar, User, PenLine } from 'lucide-react';
+import { Search, Calendar, User, Loader, Newspaper, X, Hash, Eye } from 'lucide-react';
 import { supabase, BlogPost } from '../lib/supabase';
-import ResponsiveImage from '../components/ResponsiveImage';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { useAuth } from '../contexts/AuthContext';
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function PostCollage({ post }: { post: BlogPost }) {
-  const images = [post.featured_image_url, post.supporting_image_url, post.second_image_url].filter(
-    (img): img is string => !!img
-  );
-
-  if (images.length === 0) {
-    return (
-      <div className="aspect-[16/10] bg-navy-100 dark:bg-slate-700 flex items-center justify-center">
-        <PenLine className="w-12 h-12 text-navy-300 dark:text-slate-500" />
-      </div>
-    );
-  }
-
-  if (images.length === 1) {
-    return (
-      <ResponsiveImage
-        src={images[0]}
-        alt={post.title}
-        className="w-full aspect-[16/10] object-cover"
-        loading="lazy"
-        widths={[400, 800, 1200]}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        aspectRatio="16 / 10"
-      />
-    );
-  }
-
-  if (images.length === 2) {
-    return (
-      <div className="grid grid-cols-2 gap-0.5 aspect-[16/10]">
-        <ResponsiveImage
-          src={images[0]}
-          alt={post.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          widths={[400, 800]}
-          sizes="50vw"
-          aspectRatio="16 / 10"
-        />
-        <ResponsiveImage
-          src={images[1]}
-          alt=""
-          className="w-full h-full object-cover"
-          loading="lazy"
-          widths={[400, 800]}
-          sizes="50vw"
-          aspectRatio="16 / 10"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 grid-rows-2 gap-0.5 aspect-[16/10]">
-      <ResponsiveImage
-        src={images[0]}
-        alt={post.title}
-        className="w-full h-full object-cover row-span-2"
-        loading="lazy"
-        widths={[400, 800]}
-        sizes="50vw"
-        aspectRatio="16 / 10"
-      />
-      <ResponsiveImage
-        src={images[1]}
-        alt=""
-        className="w-full h-full object-cover"
-        loading="lazy"
-        widths={[400]}
-        sizes="50vw"
-        aspectRatio="16 / 10"
-      />
-      <ResponsiveImage
-        src={images[2]}
-        alt=""
-        className="w-full h-full object-cover"
-        loading="lazy"
-        widths={[400]}
-        sizes="50vw"
-        aspectRatio="16 / 10"
-      />
-    </div>
-  );
-}
 
 export default function BlogList() {
-  const { profile } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  const canWrite = profile?.role === 'admin' || profile?.role === 'faculty';
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    async function fetchPosts() {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('blog_posts')
-          .select('*')
-          .eq('is_published', true)
-          .order('published_at', { ascending: false });
-
-        if (fetchError) throw fetchError;
-        setPosts(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load blog posts');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchPosts();
+    (async () => {
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false });
+      setPosts((data as BlogPost[]) ?? []);
+      setLoading(false);
+    })();
   }, []);
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    posts.forEach((p) => p.hashtags?.forEach((t) => tagSet.add(t)));
-    return Array.from(tagSet).sort();
-  }, [posts]);
-
-  const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      const matchesSearch =
-        !searchQuery ||
-        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.author_name?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTag = !activeTag || post.hashtags?.includes(activeTag);
-      return matchesSearch && matchesTag;
-    });
-  }, [posts, searchQuery, activeTag]);
-
-  if (loading) return <LoadingSpinner message="Loading blog posts..." />;
-  if (error) {
-    return (
-      <div className="page-container py-16">
-        <div className="card p-8 text-center">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      </div>
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return posts;
+    return posts.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.author_name.toLowerCase().includes(q) ||
+        (p.hashtags ?? []).some((t) => t.toLowerCase().includes(q))
     );
-  }
+  }, [posts, search]);
 
   return (
-    <div className="page-container py-8 md:py-12">
-      <div className="mb-8">
-        <h1 className="section-title">College Blog</h1>
-        <p className="section-subtitle">
-          Reflections, devotionals, and insights from the Aizawl Bible College community
-        </p>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by title or author..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-field pl-10"
-          />
-        </div>
-        {canWrite && (
-          <Link
-            to="/admin/blog/new"
-            className="btn-primary flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            <PenLine className="w-4 h-4" /> Write Post
-          </Link>
-        )}
-      </div>
-
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-8">
-          <button
-            onClick={() => setActiveTag(null)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              !activeTag
-                ? 'bg-navy-900 text-white dark:bg-amber-500 dark:text-slate-900'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-            }`}
-          >
-            All
-          </button>
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setActiveTag(tag === activeTag ? null : tag)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                activeTag === tag
-                  ? 'bg-navy-900 text-white dark:bg-amber-500 dark:text-slate-900'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-              }`}
-            >
-              <Tag className="w-3 h-3" />
-              {tag}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {filteredPosts.length === 0 ? (
-        <div className="card p-12 text-center">
-          <PenLine className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500 dark:text-slate-400">
-            {posts.length === 0 ? 'No blog posts have been published yet.' : 'No posts match your search.'}
+    <div className="page-enter">
+      {/* Hero header */}
+      <div className="bg-navy-950 py-12 md:py-16">
+        <div className="page-container max-w-4xl text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold-500/20 text-gold-400 rounded-full text-xs font-semibold uppercase tracking-wide mb-4">
+            <Newspaper className="w-3.5 h-3.5" /> Blog & Articles
+          </div>
+          <h1 className="text-3xl md:text-5xl font-serif font-bold text-white mb-3">
+            Articles & Reflections
+          </h1>
+          <p className="text-slate-300 text-sm md:text-base max-w-xl mx-auto">
+            Explore writings from our faculty and staff on theology, ministry, and Christian life.
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPosts.map((post) => (
-            <Link
-              key={post.id}
-              to={`/post/${post.slug}`}
-              className="card overflow-hidden hover:shadow-lg transition-shadow group"
+      </div>
+
+      <div className="page-container max-w-4xl py-8 md:py-12">
+        {/* Search bar */}
+        <div className="relative mb-8">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title, author, or hashtag..."
+            className="w-full pl-12 pr-12 py-3.5 bg-white border border-slate-200 rounded-xl text-sm text-navy-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent shadow-sm"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
-              <div className="overflow-hidden">
-                <PostCollage post={post} />
-              </div>
-              <div className="p-5">
-                <h2 className="font-serif text-xl font-bold text-navy-950 dark:text-slate-100 mb-2 line-clamp-2 group-hover:text-navy-700 dark:group-hover:text-amber-400 transition-colors">
-                  {post.title}
-                </h2>
-                <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-3">
-                  <span className="flex items-center gap-1">
-                    <User className="w-3.5 h-3.5" />
-                    {post.author_name}
-                  </span>
-                  {post.published_at && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {formatDate(post.published_at)}
-                    </span>
-                  )}
-                </div>
-                {post.hashtags && post.hashtags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {post.hashtags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-0.5 rounded-full text-xs font-medium bg-navy-50 text-navy-600 dark:bg-slate-700 dark:text-amber-300"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                    {post.hashtags.length > 3 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400">
-                        +{post.hashtags.length - 3}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </Link>
-          ))}
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Results count */}
+        <p className="text-sm text-slate-500 mb-6">
+          {loading ? 'Loading...' : `${filtered.length} article${filtered.length !== 1 ? 's' : ''}${search ? ` found` : ''}`}
+        </p>
+
+        {/* Posts */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader className="w-8 h-8 text-navy-700 animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <Newspaper className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg">
+              {search ? 'No articles match your search.' : 'No articles have been published yet.'}
+            </p>
+            {search && (
+              <button onClick={() => setSearch('')} className="mt-4 text-gold-600 hover:text-gold-700 text-sm font-medium">
+                Clear search
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {filtered.map((post) => (
+              <BlogCard key={post.id} post={post} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BlogCard({ post }: { post: BlogPost }) {
+  const previewText = (post.intro_text || post.body_text || post.conclusion_text || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/[#*]/g, '')
+    .split('\n')[0]
+    .slice(0, 140);
+  const dateStr = post.published_at
+    ? new Date(post.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : new Date(post.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  // Collect all available images for collage
+  const images: string[] = [];
+  if (post.featured_image_url) images.push(post.featured_image_url);
+  if (post.supporting_image_url) images.push(post.supporting_image_url);
+  if (post.second_image_url) images.push(post.second_image_url);
+
+  return (
+    <Link
+      to={`/post/${post.slug}`}
+      className="group block relative overflow-hidden rounded-2xl aspect-[4/3] shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
+    >
+      {/* Collage background */}
+      {images.length > 0 ? (
+        images.length === 1 ? (
+          <img
+            src={images[0]}
+            alt={post.title}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          />
+        ) : images.length === 2 ? (
+          <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+            {images.slice(0, 2).map((img, idx) => (
+              <img
+                key={idx}
+                src={img}
+                alt={post.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5">
+            <img
+              src={images[0]}
+              alt={post.title}
+              className="col-span-2 row-span-1 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            />
+            {images.slice(1, 3).map((img, idx) => (
+              <img
+                key={idx}
+                src={img}
+                alt={post.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-navy-800 to-navy-950 flex items-center justify-center">
+          <Newspaper className="w-12 h-12 text-gold-500/40" />
         </div>
       )}
-    </div>
+
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+      {/* Content */}
+      <div className="absolute inset-0 p-5 flex flex-col justify-end">
+        {/* Hashtags */}
+        {post.hashtags && post.hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {post.hashtags.slice(0, 3).map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gold-500/90 text-navy-950 text-[11px] font-semibold rounded-full">
+                <Hash className="w-2.5 h-2.5" />{tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Title */}
+        <h3 className="font-serif font-bold text-white text-lg md:text-xl leading-snug mb-2 group-hover:text-gold-300 transition-colors line-clamp-2">
+          {post.title}
+        </h3>
+
+        {/* Preview text */}
+        <p className="text-white/80 text-sm line-clamp-2 mb-3">{previewText}</p>
+
+        {/* Author, Date & Views */}
+        <div className="flex items-center gap-3 text-xs text-white/60">
+          <span className="inline-flex items-center gap-1">
+            <User className="w-3.5 h-3.5 text-gold-400" />{post.author_name}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-gold-400" />{dateStr}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Eye className="w-3.5 h-3.5 text-gold-400" />{(post.view_count ?? 0).toLocaleString('en-IN')}
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }

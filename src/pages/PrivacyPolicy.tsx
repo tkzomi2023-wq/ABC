@@ -1,126 +1,173 @@
-import { FileText, ShieldCheck } from 'lucide-react';
-
-type PrivacySection = {
-  title: string;
-  paragraphs: string[];
-};
-
-const SECTIONS: PrivacySection[] = [
-  {
-    title: '1. Introduction',
-    paragraphs: [
-      'Aizawl Bible College ("we", "us", or "our") is committed to protecting the privacy of visitors to our website and users of our services. This Privacy Policy explains how we collect, use, and safeguard your personal information.',
-      'By using our website, you consent to the collection and use of your information as described in this policy.',
-    ],
-  },
-  {
-    title: '2. Information We Collect',
-    paragraphs: [
-      'We may collect the following types of personal information when you interact with our website:',
-      'Account information: name, email address, phone number, and other details you provide when registering for an account or submitting an application.',
-      'Application information: personal, academic, church, and family details provided in the application form.',
-      'Contact information: name, email, and message content submitted through our contact form.',
-      'Usage data: information about how you access and use the website, including IP address, browser type, and pages visited.',
-    ],
-  },
-  {
-    title: '3. How We Use Your Information',
-    paragraphs: [
-      'We use the information we collect for the following purposes:',
-      'To process and review applications for admission to the college.',
-      'To communicate with you regarding your application, account, or inquiries.',
-      'To provide and improve our services, courses, and website features.',
-      'To send important notices, updates, and academic information.',
-      'To comply with legal obligations and protect the rights and safety of the college and its community.',
-    ],
-  },
-  {
-    title: '4. How We Share Your Information',
-    paragraphs: [
-      'We do not sell, trade, or rent your personal information to third parties. We may share your information in the following circumstances:',
-      'With faculty and staff members who need the information to process your application or provide academic services.',
-      'With third-party service providers who perform services on our behalf, such as hosting and analytics providers, under appropriate confidentiality agreements.',
-      'When required by law, court order, or government regulation, or to protect the rights, property, or safety of the college or others.',
-    ],
-  },
-  {
-    title: '5. Data Security',
-    paragraphs: [
-      'We implement appropriate technical, administrative, and physical safeguards designed to protect your personal information from unauthorized access, disclosure, alteration, or destruction.',
-      'However, no method of transmission over the Internet or electronic storage is completely secure. While we strive to protect your information, we cannot guarantee absolute security.',
-    ],
-  },
-  {
-    title: '6. Cookies',
-    paragraphs: [
-      'Our website may use cookies and similar technologies to enhance your browsing experience, analyze site traffic, and remember your preferences. You can choose to disable cookies through your browser settings, though some features of the site may not function properly without them.',
-    ],
-  },
-  {
-    title: '7. Your Rights',
-    paragraphs: [
-      'You have the right to access, update, or correct the personal information we hold about you. You may also request that we delete your personal information, subject to certain legal and academic record-keeping obligations.',
-      'To exercise any of these rights, please contact us using the information provided at the end of this policy.',
-    ],
-  },
-  {
-    title: '8. Children\'s Privacy',
-    paragraphs: [
-      'Our website and services are intended for individuals who are at least 18 years of age or who have parental consent. We do not knowingly collect personal information from children under 18 without parental consent.',
-    ],
-  },
-  {
-    title: '9. Changes to This Privacy Policy',
-    paragraphs: [
-      'We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated revision date. We encourage you to review this policy periodically to stay informed about how we protect your information.',
-    ],
-  },
-  {
-    title: '10. Contact Us',
-    paragraphs: [
-      'If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at info@aizawlbiblecollege.edu.in or by mail at Aizawl Bible College, Aizawl, Mizoram 796001, India.',
-    ],
-  },
-];
+import { Shield } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
-      <section className="bg-navy-800 dark:bg-navy-900 text-white py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <ShieldCheck className="w-12 h-12 text-gold-400 mx-auto mb-4" />
-          <h1 className="text-4xl sm:text-5xl font-serif font-bold mb-4">Privacy Policy</h1>
-          <p className="text-navy-100 dark:text-navy-300 text-lg">
-            How we collect, use, and protect your personal information
-          </p>
-        </div>
-      </section>
-
-      <article className="max-w-3xl mx-auto px-4 py-12">
-        <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-800 p-6 sm:p-10">
-          <div className="flex items-center gap-2 text-sm text-navy-500 dark:text-navy-400 mb-8 pb-6 border-b border-navy-100 dark:border-navy-800">
-            <FileText className="w-4 h-4" />
-            <span>Last updated: January 2025</span>
-          </div>
-
-          <div className="space-y-10">
-            {SECTIONS.map((section) => (
-              <section key={section.title}>
-                <h2 className="text-xl font-serif font-bold text-navy-900 dark:text-navy-50 mb-4">
-                  {section.title}
-                </h2>
-                <div className="space-y-3">
-                  {section.paragraphs.map((para, i) => (
-                    <p key={i} className="text-navy-700 dark:text-navy-200 leading-relaxed text-sm sm:text-base">
-                      {para}
-                    </p>
-                  ))}
-                </div>
-              </section>
-            ))}
+    <div className="page-enter min-h-screen bg-slate-50 py-12">
+      <div className="page-container max-w-4xl">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+          <div className="bg-navy-950 px-6 py-8 text-center">
+            <Shield className="w-10 h-10 text-gold-400 mx-auto mb-3" />
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">Privacy Policy</h1>
+            <p className="text-slate-400 text-sm mt-2">Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
         </div>
-      </article>
+
+        {/* Content */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+          <div className="prose prose-navy max-w-none">
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">1. Information We Collect</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                Aizawl Bible College collects information to provide better services to our students, applicants, and website visitors. The types of information we collect include:
+              </p>
+
+              <h3 className="text-lg font-semibold text-navy-800 mb-2">Personal Information</h3>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2 mb-4">
+                <li>Name, email address, phone number, and postal address</li>
+                <li>Date of birth and gender</li>
+                <li>Educational qualifications and academic records</li>
+                <li>Church affiliation and denominational background</li>
+                <li>Parent/guardian information</li>
+                <li>Photographs and identification documents</li>
+              </ul>
+
+              <h3 className="text-lg font-semibold text-navy-800 mb-2">Financial Information</h3>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2 mb-4">
+                <li>Payment and transaction records</li>
+                <li>Fee payment history</li>
+                <li>Scholarship and financial aid information</li>
+              </ul>
+
+              <h3 className="text-lg font-semibold text-navy-800 mb-2">Technical Information</h3>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2">
+                <li>IP address and browser type</li>
+                <li>Device information and operating system</li>
+                <li>Pages visited and time spent on our website</li>
+                <li>Cookies and similar tracking technologies</li>
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">2. How We Use Your Information</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                We use the collected information for the following purposes:
+              </p>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2">
+                <li>Processing admission applications and enrollment</li>
+                <li>Managing student academic records and progress</li>
+                <li>Communication regarding courses, events, and announcements</li>
+                <li>Processing payments and maintaining financial records</li>
+                <li>Generating certificates and official documents</li>
+                <li>Improving website functionality and user experience</li>
+                <li>Fulfilling legal and regulatory requirements</li>
+                <li>Sending updates about college activities and programs</li>
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">3. Information Sharing</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                We do not sell, trade, or rent personal information to third parties. We may share information in the following circumstances:
+              </p>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2">
+                <li>With accreditation bodies (PATA) for academic verification</li>
+                <li>With government authorities as required by law</li>
+                <li>With service providers who assist in website operations (e.g., Razorpay for payments)</li>
+                <li>With consent from the individual for specific purposes</li>
+                <li>In connection with legal proceedings or investigations</li>
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">4. Data Security</h2>
+              <p className="text-slate-600 leading-relaxed">
+                Aizawl Bible College implements appropriate security measures to protect personal information from unauthorized access, alteration, disclosure, or destruction. These measures include secure servers, encryption, access controls, and regular security reviews. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">5. Cookies and Tracking</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                Our website uses cookies and similar tracking technologies to:
+              </p>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2">
+                <li>Remember user preferences and settings</li>
+                <li>Authenticate logged-in users</li>
+                <li>Analyze website traffic and usage patterns</li>
+                <li>Improve website performance and functionality</li>
+              </ul>
+              <p className="text-slate-600 leading-relaxed mt-4">
+                You can configure your browser to reject cookies, but this may affect website functionality.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">6. Your Rights</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                You have the right to:
+              </p>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2">
+                <li>Access your personal information held by the college</li>
+                <li>Request correction of inaccurate or incomplete information</li>
+                <li>Request deletion of your personal information (subject to legal requirements)</li>
+                <li>Opt-out of marketing communications</li>
+                <li>Withdraw consent for specific data processing activities</li>
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">7. Data Retention</h2>
+              <p className="text-slate-600 leading-relaxed">
+                We retain personal information for as long as necessary to fulfill the purposes for which it was collected, including legal, academic, and operational requirements. Academic records are retained permanently as required by the Government of Mizoram and accreditation bodies. Other records are retained according to applicable retention schedules.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">8. Third-Party Services</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                Our website may use third-party services that collect information:
+              </p>
+              <ul className="list-disc pl-6 text-slate-600 space-y-2">
+                <li><strong>Razorpay:</strong> For processing online payments securely</li>
+                <li><strong>Supabase:</strong> For database and authentication services</li>
+                <li><strong>Google Fonts:</strong> For typography</li>
+              </ul>
+              <p className="text-slate-600 leading-relaxed mt-4">
+                These services have their own privacy policies, and we encourage you to review them.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">9. Children's Privacy</h2>
+              <p className="text-slate-600 leading-relaxed">
+                Our website and services are not directed to children under 18. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">10. Changes to This Policy</h2>
+              <p className="text-slate-600 leading-relaxed">
+                We may update this Privacy Policy periodically. Changes will be posted on this page with an updated revision date. We encourage you to review this policy regularly.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-serif font-bold text-navy-900 mb-4">11. Contact Us</h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                For questions or concerns about this Privacy Policy or our data practices, please contact:
+              </p>
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="font-medium text-navy-900">Aizawl Bible College</p>
+                <p className="text-slate-600">Post Box – 115, Tuikual North 'D' Mual</p>
+                <p className="text-slate-600">Aizawl – 796001, Mizoram, India</p>
+                <p className="text-slate-600 mt-2">Email: aizawlbiblecollege24@gmail.com</p>
+                <p className="text-slate-600">Phone: 9383007361 / 9862713689</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

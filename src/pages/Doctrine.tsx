@@ -1,155 +1,149 @@
-import { BookOpen, Cross, Flame, Shield, Globe, Hand, Crown, Bird, Church } from 'lucide-react';
+import { BookOpen, Star, Zap, AlertTriangle, Heart, Droplets, Flame, Mic, Shield, Globe, Users, Plus, ArrowUp, Award, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-type Belief = {
-  icon: typeof BookOpen;
-  title: string;
-  description: string;
-};
-
-const BELIEFS: Belief[] = [
+const beliefs = [
   {
     icon: BookOpen,
-    title: 'The Scriptures Inspired',
-    description:
-      'We believe the Bible is the inspired and authoritative Word of God, the infallible rule of faith and conduct, and the supreme standard by which all human conduct, creeds, and opinions shall be tried.',
+    title: 'The Inspired Scriptures',
+    text: 'We believe the Scriptures are inspired by God.',
   },
   {
-    icon: Cross,
-    title: 'The One True God',
-    description:
-      'We believe in one eternally existing, infinite God, the Creator and Sustainer of all things, who has revealed Himself as the triune Godhead—Father, Son, and Holy Spirit.',
+    icon: Star,
+    title: 'One True God',
+    text: 'We believe there is One True God revealed in three persons.',
   },
   {
-    icon: Bird,
-    title: 'The Deity of the Lord Jesus Christ',
-    description:
-      'We believe in the Lord Jesus Christ as the eternal Son of God, conceived of the Holy Spirit, born of the Virgin Mary, fully God and fully man, who lived a sinless life, died on the cross for our sins, rose bodily from the dead, and ascended to the right hand of the Father.',
+    icon: Zap,
+    title: 'The Deity of Christ',
+    text: 'We believe in the deity of the Lord Jesus Christ.',
   },
   {
-    icon: Flame,
+    icon: AlertTriangle,
     title: 'The Fall of Man',
-    description:
-      'We believe that man was created good and upright in the image of God, but by voluntary transgression fell from his original state, thereby incurring both physical and spiritual death and separation from God.',
+    text: 'We believe man willingly fell into sin — ushering in evil and death, both physical and spiritual, into the world.',
   },
   {
-    icon: Shield,
-    title: 'The Salvation of Man',
-    description:
-      'We believe that salvation is received through repentance toward God and faith in the Lord Jesus Christ, resulting in regeneration by the Holy Spirit, justification by grace through faith, and the gift of eternal life.',
+    icon: Heart,
+    title: 'Salvation',
+    text: 'We believe every person can be restored to fellowship with God through accepting Christ\'s offer of forgiveness and salvation.',
   },
   {
-    icon: Hand,
-    title: 'The Ordinances of the Church',
-    description:
-      'We believe in the ordinance of water baptism by immersion, symbolizing the believer\'s identification with Christ in His death and resurrection, and the ordinance of the Lord\'s Supper (Holy Communion) as a memorial of His suffering and death.',
+    icon: Droplets,
+    title: 'Baptism & Communion',
+    text: 'We believe in Water Baptism by immersion after salvation and Holy Communion as a symbolic remembrance of Christ\'s suffering and death for our salvation.',
   },
   {
     icon: Flame,
-    title: 'The Baptism in the Holy Spirit',
-    description:
-      'We believe in the baptism in the Holy Spirit as a distinct experience subsequent to salvation, empowering believers for life and service, with the initial physical evidence of speaking in other tongues as the Spirit gives utterance.',
+    title: 'Baptism in the Holy Spirit',
+    text: 'We believe the Baptism in the Holy Spirit is a special experience following salvation that empowers believers for witnessing and effective service.',
+  },
+  {
+    icon: Mic,
+    title: 'Evidence of the Spirit',
+    text: 'We believe the initial evidence of the Baptism in the Holy Spirit is speaking in tongues as experienced on the Day of Pentecost.',
   },
   {
     icon: Shield,
     title: 'Sanctification',
-    description:
-      'We believe in sanctification as an act of separation from evil and dedication to God, accomplished through the Word of God and the Holy Spirit, resulting in a life of holiness and Christlikeness.',
-  },
-  {
-    icon: Cross,
-    title: 'The Church and Its Mission',
-    description:
-      'We believe that the Church is the body of Christ, a living spiritual body of which Christ is the Head, and that its mission is to be an agency of God for evangelizing the world, worshiping God, and building up the saints.',
-  },
-  {
-    icon: Crown,
-    title: 'The Ministry and Evangelism',
-    description:
-      'We believe in a divinely called and scripturally ordained ministry, provided by our Lord for the evangelization of the world and the edification of the Church, equipping saints for the work of the ministry.',
-  },
-  {
-    icon: Bird,
-    title: 'Divine Healing',
-    description:
-      'We believe that deliverance from sickness is provided for in the atonement of Christ and is the privilege of all believers, who may pray for healing according to the will of God.',
-  },
-  {
-    icon: Crown,
-    title: 'The Blessed Hope',
-    description:
-      'We believe in the blessed hope—the rapture of the Church at Christ&apos;s coming—when the dead in Christ shall rise first, and we who are alive and remain shall be caught up to meet the Lord in the air.',
-  },
-  {
-    icon: Cross,
-    title: 'The Millennial Reign of Christ',
-    description:
-      'We believe in the second coming of Christ with His saints to establish His millennial kingdom on earth, bringing visible and universal reign of peace and righteousness.',
-  },
-  {
-    icon: Flame,
-    title: 'The Final Judgment',
-    description:
-      'We believe in the final judgment, when the wicked dead will be raised and judged according to their works, and will be consigned to everlasting punishment in the lake of fire, which is the second death.',
+    text: 'We believe sanctification initially occurs at Salvation but is also a progressive lifelong process.',
   },
   {
     icon: Globe,
-    title: 'The New Heavens and New Earth',
-    description:
-      'We believe in the promise of a new heavens and a new earth, wherein dwells righteousness, the eternal home of the redeemed, where God will dwell with His people forever in perfect fellowship and glory.',
+    title: 'Mission of the Church',
+    text: 'We believe the church has a mission to seek and save all who are lost in sin.',
+  },
+  {
+    icon: Users,
+    title: 'Ordained Leadership',
+    text: 'We believe a divinely called and biblically ordained leadership ministry serves the church.',
+  },
+  {
+    icon: Plus,
+    title: 'Divine Healing',
+    text: 'We believe divine healing of the sick is a privilege for Christians today and is provided for in Christ\'s atonement.',
+  },
+  {
+    icon: ArrowUp,
+    title: 'The Blessed Hope',
+    text: 'We believe in the Blessed Hope — when Jesus raptures his church prior to his return to Earth.',
+  },
+  {
+    icon: Award,
+    title: 'The Millennial Reign',
+    text: 'We believe in the millennial reign of Christ when Jesus returns with his saints at his second coming and begins his rule over earth for 1,000 years.',
+  },
+  {
+    icon: AlertCircle,
+    title: 'Final Judgment',
+    text: 'We believe in a final judgment for those who have rejected Christ.',
+  },
+  {
+    icon: Sparkles,
+    title: 'New Heavens & New Earth',
+    text: 'We believe in a new heavens and a new earth that Christ is preparing for all people who have accepted Him.',
   },
 ];
 
 export default function Doctrine() {
   return (
-    <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
-      <section className="bg-navy-800 dark:bg-navy-900 text-white py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <Church className="w-12 h-12 text-gold-400 mx-auto mb-4" />
-          <h1 className="text-4xl sm:text-5xl font-serif font-bold mb-4">Our Doctrine</h1>
-          <p className="text-navy-100 dark:text-navy-300 text-lg">
-            The fundamental truths we believe and teach at Aizawl Bible College
+    <div className="page-enter">
+      {/* Hero */}
+      <section className="bg-navy-950 py-8 md:py-14">
+        <div className="page-container text-center">
+          <BookOpen className="w-8 h-8 md:w-9 md:h-9 text-gold-400 mx-auto mb-2 md:mb-3" />
+          <h1 className="text-xl md:text-3xl font-serif font-bold text-white mb-1 md:mb-2">Statement of Faith</h1>
+          <p className="text-slate-400 max-w-xl mx-auto text-xs md:text-sm">
+            The foundational doctrines of Aizawl Bible College, rooted in Scripture and the Assemblies of God tradition.
           </p>
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="mb-10 text-center">
-          <p className="text-navy-700 dark:text-navy-200 leading-relaxed max-w-2xl mx-auto">
-            Aizawl Bible College stands on the foundation of the Assemblies of God sixteen
-            fundamental truths. These doctrines guide our teaching, shape our community, and
-            anchor our faith in the unchanging Word of God.
-          </p>
+      {/* Intro */}
+      <section className="py-16 bg-white">
+        <div className="page-container max-w-3xl text-center">
+          <div className="bg-gold-50 border border-gold-200 rounded-2xl p-6 md:p-8 mb-10">
+            <p className="text-slate-700 leading-relaxed text-base md:text-lg">
+              Aizawl Bible College holds firmly to the fundamental truths of the Christian faith as affirmed by the
+              Assemblies of God. We believe in the full inspiration of the Scriptures, salvation through Jesus Christ,
+              the baptism in the Holy Spirit with the evidence of speaking in tongues, divine healing, and the soon
+              return of our Lord Jesus Christ.
+            </p>
+          </div>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {BELIEFS.map((belief, index) => {
-            const Icon = belief.icon;
-            return (
-              <article
-                key={belief.title}
-                className="bg-white dark:bg-navy-900 rounded-2xl shadow-md border border-navy-100 dark:border-navy-800 p-6 hover:shadow-lg transition"
-              >
+      {/* Beliefs */}
+      <section className="py-4 pb-16 bg-slate-50">
+        <div className="page-container max-w-4xl">
+          <div className="space-y-4">
+            {beliefs.map((belief, i) => (
+              <div key={belief.title} className="card p-5 md:p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-navy-100 dark:bg-navy-800 flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-navy-600 dark:text-gold-400" />
+                  <div className="w-10 h-10 bg-navy-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <belief.icon className="w-5 h-5 text-navy-700" />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-serif font-bold text-navy-900 dark:text-navy-50 mb-2">
-                      <span className="text-gold-600 dark:text-gold-400 text-sm font-sans mr-2">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      {belief.title}
-                    </h2>
-                    <p className="text-sm text-navy-600 dark:text-navy-300 leading-relaxed">
-                      {belief.description}
-                    </p>
+                  <div className="flex-1 flex items-start gap-3">
+                    <span className="w-6 h-6 bg-gold-400 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-serif font-bold text-navy-900 text-base mb-1">{belief.title}</h3>
+                      <p className="text-slate-600 text-sm leading-relaxed">{belief.text}</p>
+                    </div>
                   </div>
                 </div>
-              </article>
-            );
-          })}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link to="/academics" className="btn-primary">
+              Academic Programs <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link to="/apply" className="btn-gold">Apply Now</Link>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
